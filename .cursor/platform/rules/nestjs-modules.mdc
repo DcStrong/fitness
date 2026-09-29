@@ -1,0 +1,22 @@
+---
+description: Module wiring, dynamic modules, CQRS placement
+globs: src/**/*.module.ts
+alwaysApply: false
+---
+
+# NestJS Modules
+
+Эталоны: `platform/examples/module/`
+
+- Feature: `feature.module.ts` — forFeature, providers, exports.
+- Dynamic + ports: `dynamic-register-async.ts`.
+- CQRS handler в **доменном** модуле: `cqrs-handler-in-domain.ts`.
+
+## ✅ / ❌
+
+```typescript
+// ✅ ItemModule imports QueueModule, provides SaveItemCommandHandler
+// ❌ QueueModule imports ItemRepository
+```
+
+Переносимость: `module-boundaries.mdc`.

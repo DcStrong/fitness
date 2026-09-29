@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-18
+goal: Structured workout templates with exercises, sets, goal, catalog seed;
+  keep tags; Flutter editor without wizard

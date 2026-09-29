@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  Product: Fitness Yoda — платформа тренер ↔ ученик (студент).
+  Source of truth: openspec/specs/ + docs/; agent index: .cursor/project/docs/map.md.
+  Miro: https://miro.com/app/board/uXjVPLnb8m8=/
+
+  Stack:
+  - Backend: NestJS + TypeORM + PostgreSQL in backend/api (modules flat under src/<domain>/)
+  - Mobile: Flutter in app/fitness_app — Bloc/Cubit, go_router, dio, flutter_secure_storage
+  - Web: Next.js trainer console in web_app/
+
+  Ports (dev): API http://localhost:3001 ; web http://localhost:3000
+
+  API (auth sample):
+  - POST /auth/register { email, password, role: trainer|student }
+  - POST /auth/login { email, password }
+  - POST /auth/refresh { refreshToken }
+  - POST /auth/logout { refreshToken }
+  - GET /users/me (Bearer) → { id, email, roles, permissions }
+
+  Flutter skills: flutter-bloc-feature, flutter-api-client, flutter-auth-shell, project-orientation
+  Docs: docs/README.md, docs/mobile/tooling.md
+
+  Language: UI Russian; code English.
+  Roles: coach = trainer; API roles trainer | student.
+
+rules:
+  proposal:
+    - Always include Non-goals
+    - Reference docs/ and relevant openspec/specs/<capability>/spec.md
+    - Do not change Nest API unless the change requires it (or a bug blocks the client)
+    - Scope the change to one surface when possible (API / Flutter / web)
+  specs:
+    - Prefer ADDED capabilities for new client behavior; MODIFIED for existing baseline
+    - Keep requirements testable (WHEN/THEN scenarios)
+  design:
+    - Flutter: Bloc/Cubit only (no Riverpod); follow flutter-* skills
+    - Nest: follow platform skills (add-api-endpoint, domain-interfaces, …)
+    - Prefer thin feature folders; avoid freezed/hive/get_it unless clearly needed
+  tasks:
+    - Break into small checkable items under the correct tree (backend/api, app/fitness_app, web_app)
+    - Include manual smoke against local API when touching auth or booking flows

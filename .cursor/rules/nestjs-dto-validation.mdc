@@ -1,0 +1,17 @@
+---
+description: DTO naming, validators, response constructors
+globs: src/**/*.dto.ts,backend/api/src/**/*.dto.ts
+alwaysApply: false
+---
+
+# DTO и Validation
+
+Эталоны: `platform/examples/dto/`
+
+- Request: `implements Api.SomeRoute.RequestBody`, snake_case поля.
+- Nested: `@ValidateNested()` + `@Type(() => NestedDto)` — `request-nested.ts`.
+- Response: constructor от `*Returns` — `response-constructor.ts`.
+
+Глобальный `ValidationPipe` → 422 RFC 7807. Свой pipe в контроллере не создавать.
+
+OpenAPI workflow: `openapi-contracts.mdc`. Response skill: `response-dto-contract-mapper`.

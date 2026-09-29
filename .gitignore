@@ -1,0 +1,17 @@
+# Env & secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/api/.env
+**/.env
+
+# Dependencies & build
+node_modules/
+dist/
+build/
+coverage/
+
+# OS / IDE
+.DS_Store
+*.log

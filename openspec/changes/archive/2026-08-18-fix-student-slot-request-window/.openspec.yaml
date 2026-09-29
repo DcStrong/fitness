@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-18
+goal: Linked students only see and can request slots that start more than 2
+  hours from now

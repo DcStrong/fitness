@@ -1,0 +1,20 @@
+---
+description: HTTP exceptions and global filter
+globs: src/**/*.ts,backend/api/src/**/*.ts
+alwaysApply: false
+---
+
+# API Error Handling
+
+- Базовый тип: `BaseHttpException` — `{ status, title, detail, type? }`.
+- 422: `ValidationErrorHttpException` + `validation[]`, `application/problem+json`.
+- Global `AllExceptionFilter` + error reporter (Sentry и т.д.).
+
+```typescript
+// ✅ assertHaveAccess(...) → NoAccessHttpException
+// ❌ throw new Error('denied') без HTTP mapping
+```
+
+Доменные ошибки без Nest deps → map в filter.
+
+Skill: `debug-api-error`.

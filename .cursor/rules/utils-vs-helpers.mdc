@@ -1,0 +1,15 @@
+---
+description: util vs helper placement
+globs: src/**/*.ts,backend/api/src/**/*.ts
+alwaysApply: true
+---
+
+# Util vs Helper
+
+**Util** (`**/util/*.util.ts`) — универсальный примитив без домена/фреймворка: `parseBoolean`, `requireEnv`.
+
+**Helper** (`**/helper/*.helper.ts`) — контекст (TypeORM QB, Sentry, class-transformer, domain).
+
+Вопрос: *можно вызвать из любого модуля без контекста?* Да → util. Нет → helper.
+
+Не смешивать суффиксы `.util.ts` / `.helper.ts`.

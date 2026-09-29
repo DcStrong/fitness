@@ -1,0 +1,11 @@
+---
+description: JSDoc on Russian for public APIs
+globs: src/**/*.ts,backend/api/src/**/*.ts
+alwaysApply: false
+---
+
+# JSDoc
+
+Русский язык. Публичные методы: описание, `@param`, `@returns`, `@throws` (включая вложенные вызовы).
+
+Не дублировать очевидное из сигнатуры.

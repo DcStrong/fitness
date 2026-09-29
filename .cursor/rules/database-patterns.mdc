@@ -1,0 +1,19 @@
+---
+description: TypeORM entity and repository patterns
+globs: "src/**/*.entity.ts,src/**/*.repository.ts,src/database/**,backend/api/src/**/*.entity.ts,backend/api/src/**/*.repository.ts,backend/api/src/database/**"
+alwaysApply: false
+---
+
+# Database Patterns
+
+Эталоны: `platform/examples/repository/`
+
+- Entity — только в repository layer; сервисы используют model/interface.
+- Union колонок (status/mode) — в `src/<domain>/interface/`, entity только импортирует (`domain-interfaces`).
+- `@Injectable()` repository, не extends `Repository<T>`.
+- Узкие методы: `narrow-update.ts`.
+- Сложная запись: `preload-save-reload.ts` — без mutate входной entity.
+
+Skill: `repository-pure-persistence`. Migrations — `project-overview` scripts.
+
+Transactions: `@Transactional()` в сервисе.

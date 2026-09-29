@@ -1,0 +1,60 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "ts-node": {
+    "files": true
+  },
+  "include": ["src/**/*", "test/**/*", "@types/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    // File Layout
+    "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "commonjs",
+    "target": "esnext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    // For nodejs:
+    "lib": ["esnext"],
+    // types не задаём — подхватываются все установленные @types/* (node, jest и т.д.)
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style Options
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    // Completeness
+    "skipLibCheck": true,
+    // Path aliases without baseUrl (TS 6+/7-ready): prefixes are absolute from this config
+    "paths": {
+      "#config/*": ["./src/config/*"],
+      "#db/*": ["./src/database/*"],
+      "#types/*": ["./src/types/*"],
+      "#module/*": ["./src/module/*"],
+      "#common/*": ["./src/common/*"],
+      "#contract/*": ["./src/contract/*"],
+      "#exception/*": ["./src/exception/*"]
+    }
+  }
+}

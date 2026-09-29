@@ -1,0 +1,17 @@
+---
+description: JWT middleware + guard + Authority (platform default)
+globs: src/**/controller/**,src/guard/**,src/module/app/**
+alwaysApply: false
+---
+
+# Auth и Authority
+
+Схема: `platform/examples/auth/middleware-guard-flow.md`
+
+1. Middleware — парсит JWT → `request.authority`.
+2. `JwtAuthGuard` — на public controllers (class-level).
+3. `@Authority()` — `AuthorityModel` в handler.
+
+Internal/incoming controllers — без guard; зафиксировать в `project/`.
+
+Эталон guard: `examples/controller/class-level-guard.ts`.

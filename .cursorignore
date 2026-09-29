@@ -1,0 +1,8 @@
+# Dependencies and build artifacts — keep out of agent search context
+**/node_modules/**
+**/.dart_tool/**
+**/build/**
+**/.next/**
+backend/api/dist/**
+**/coverage/**
+**/.flutter-plugins-dependencies

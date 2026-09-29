@@ -1,0 +1,94 @@
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background: #f3f7f5;
+  color: #2e2e2e;
+}
+
+.sidebar {
+  background: #166246;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  gap: 16px;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.navLink,
+.navActive {
+  color: #e8f5ef;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.navActive {
+  background: #57cea8;
+  color: #12352a;
+  font-weight: 600;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.email {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  word-break: break-all;
+}
+
+.main {
+  padding: 32px;
+  max-width: 1100px;
+}
+
+.center {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: #f3f7f5;
+}
+
+.button,
+.buttonGhost {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font: inherit;
+}
+
+.button {
+  background: #166246;
+  color: #fff;
+}
+
+.buttonGhost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}

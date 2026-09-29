@@ -1,0 +1,22 @@
+export type {
+  ApplyWorkoutProgramParams,
+  ReplaceProgramDayItemParams,
+  ReplaceProgramDayParams,
+  ReplaceProgressionRuleParams,
+  ReplaceSessionPrescriptionSetParams,
+  ReplaceSessionWorkoutItemParams,
+  SessionPrescriptionSetGroupReturns,
+  SessionPrescriptionSetReturns,
+  SessionWorkoutReturns,
+  SessionWorkoutSource,
+  UpsertWorkoutProgramParams,
+  WorkoutProgramDayInput,
+  WorkoutProgramDayItemInput,
+  WorkoutProgramDayItemReturns,
+  WorkoutProgramDayReturns,
+  WorkoutProgramPreviewPoint,
+  WorkoutProgramReturns,
+  WorkoutProgressionRuleInput,
+  WorkoutProgressionRuleReturns,
+} from './workout-program.types';
+export { SESSION_WORKOUT_SOURCES } from './workout-program.types';

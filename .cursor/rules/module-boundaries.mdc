@@ -1,0 +1,14 @@
+---
+description: Module boundaries and portability
+globs: src/module/**/*.ts,backend/api/src/module/**/*.ts
+alwaysApply: false
+---
+
+# Module Boundaries
+
+- Feature slice: service, interface, helper, mapper внутри модуля.
+- `#common` — только truly-shared примитивы.
+- Межмодульно: ports/adapters или events, не прямой import чужого repository.
+- CQRS handler — в домене, infra только publish (`cqrs-handler-in-domain.ts`).
+
+Доменные ошибки без HTTP; HTTP на границе controller/filter.

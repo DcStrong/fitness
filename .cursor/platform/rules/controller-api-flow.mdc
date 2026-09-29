@@ -1,0 +1,20 @@
+---
+description: Controller → mapper → service → ResponseDto
+globs: src/**/controller/**,src/**/mappers/**
+alwaysApply: false
+---
+
+# Controller API Flow
+
+```
+RequestDto → mapXxxDtoToParams → RouteXxxParams → service.routeXxx() → new XxxResponseDto(result)
+```
+
+Эталоны:
+- `examples/controller/command-handler.ts`
+- `examples/mapper/snake-to-camel.ts`
+- `examples/dto/response-constructor.ts`
+
+**GET list:** query DTO в сервис как есть (snake_case до repo), mapper не нужен — `list-handler.ts`.
+
+Один mapper — один command-сценарий.

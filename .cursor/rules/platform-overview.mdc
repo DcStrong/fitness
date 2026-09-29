@@ -1,0 +1,19 @@
+---
+description: Portable NestJS platform — стек, активация, индекс rules/skills
+globs:
+alwaysApply: true
+---
+
+# NestJS Platform
+
+Портативный слой в `.cursor/platform/`. Примеры: `platform/examples/` (не зависят от `src/`).
+
+**Активация:** `./.cursor/activate.sh` (platform + project → `.cursor/rules`, `.cursor/skills`).
+
+**Стек (типовой):** NestJS, TypeORM, OpenAPI → generated contracts, passport-jwt, CQRS, Sentry.
+
+**Workflow skills:** `add-api-endpoint`, `add-feature-module`, `refactor-service-to-platform`, `write-unit-test`, `write-e2e-test`.
+
+**Rules:** `import-aliases.mdc`, `typescript-typing.mdc`.
+
+**Project overlay:** `.cursor/project/` — домен, команды, live-references.

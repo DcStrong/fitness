@@ -1,0 +1,19 @@
+---
+description: Unit and E2E test patterns
+globs: "**/*.spec.ts,**/*.e2e-spec.ts,test/**,backend/api/test/**"
+alwaysApply: false
+---
+
+# Тестирование
+
+Эталоны: `platform/examples/testing/`
+
+- `describe`/`it` — на русском, одна мысль на `it`.
+- Unit: моки **границ** (repository, external clients), не policy/asserts.
+- E2E: `createTestApp` + overrides, contract assertions, DB cleanup.
+
+```typescript
+// ❌ expect(x).toBeDefined() как единственная проверка
+```
+
+Skills: `write-unit-test`, `write-e2e-test`.
