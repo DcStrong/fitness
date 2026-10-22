@@ -241,16 +241,19 @@ class _SessionsListScreenState extends State<SessionsListScreen>
     return Scaffold(
       appBar: FyTopBar(
         title: 'Журнал тренировок',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(isTrainer ? '/schedule' : '/home');
-            }
-          },
-        ),
+        // For a student this is the «Тренировки» tab root: no back arrow.
+        leading: isTrainer || context.canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/schedule');
+                  }
+                },
+              )
+            : null,
         actions: [
           IconButton(
             onPressed: _loading ? null : _load,

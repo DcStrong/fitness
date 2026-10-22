@@ -8,6 +8,7 @@ export 'fy_card.dart';
 export 'fy_chip.dart';
 export 'fy_date_picker.dart';
 export 'fy_field_help.dart';
+export 'fy_icon_badge.dart';
 export 'fy_info_banner.dart';
 export 'fy_input_card.dart';
 export 'fy_motion.dart';

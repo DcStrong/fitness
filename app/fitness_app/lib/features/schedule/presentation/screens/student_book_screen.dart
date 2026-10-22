@@ -146,11 +146,13 @@ class _StudentBookViewState extends State<_StudentBookView> {
     return Scaffold(
       appBar: FyTopBar(
         title: 'Запись к тренеру',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/home'),
-        ),
         actions: [
+          IconButton(
+            key: const Key('book-my-requests'),
+            tooltip: 'Мои заявки',
+            onPressed: () => context.push('/booking-requests/mine'),
+            icon: const Icon(Icons.event_note_outlined),
+          ),
           IconButton(
             onPressed: _loadingRels || _loadingSlots ? null : _loadSlots,
             icon: const Icon(Icons.refresh),
