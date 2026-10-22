@@ -366,7 +366,7 @@ class _TrainerCalendarViewState extends State<_TrainerCalendarView>
                     onEmptyHourTap: (hour) =>
                         _openCreateActions(context, prefillHour: hour),
                   ),
-                  const TrainerInboxPage(),
+                  const TrainerInboxPage(embedded: true),
                   const AvailabilityEditorPage(),
                 ],
               ),

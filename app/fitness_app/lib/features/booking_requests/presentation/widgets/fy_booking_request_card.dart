@@ -1,15 +1,16 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/fy_button.dart';
+import '../../../../app/theme/app_radii.dart';
+import '../../../../core/widgets/fy_avatar.dart';
 import '../../../../core/widgets/fy_card.dart';
+import '../../../../core/widgets/fy_status_chip.dart';
 import '../../../finance/data/money_formatter.dart';
 import '../../../schedule/presentation/schedule_format.dart';
 import '../../data/booking_request_models.dart';
 
-/// Trainer inbox card aligned to the calendar concept mockup.
+/// Trainer inbox card (DS v2): who, when and how long is left to answer,
+/// with accept as the tonal primary action.
 class FyBookingRequestCard extends StatelessWidget {
   const FyBookingRequestCard({
     required this.request,
@@ -18,6 +19,7 @@ class FyBookingRequestCard extends StatelessWidget {
     this.onAccept,
     this.onAlternate,
     this.onReject,
+    this.now,
     super.key,
   });
 
@@ -28,220 +30,163 @@ class FyBookingRequestCard extends StatelessWidget {
   final VoidCallback? onAlternate;
   final VoidCallback? onReject;
 
+  /// Clock for the time-left chip; defaults to [DateTime.now].
+  final DateTime? now;
+
   @override
   Widget build(BuildContext context) {
     final slot = request.displayedSlot;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final (status, statusLabel) = _status(now ?? DateTime.now());
 
     return FyCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onOpen,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+          InkWell(
+            onTap: onOpen,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Row(
+                    FyAvatar(displayName: request.counterpart.label, size: 44),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            request.counterpart.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          Text(
+                            MoneyFormatter.format(
+                              request.quotedPriceMinor,
+                              currency: request.quotedCurrency,
+                            ),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FyStatusChip(status: status, label: statusLabel),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.sunken,
+                    borderRadius: BorderRadius.circular(AppRadii.control),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: AppColors.mintSoft,
-                          foregroundColor: AppColors.primary,
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Text(
-                            initialsFromLabel(request.counterpart.label),
-                            style: const TextStyle(
+                            formatSlotDayRange(
+                              slot.startsAt,
+                              slot.endsAt,
+                              now: now,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w700,
-                              fontSize: 14,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            request.counterpart.label,
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        Text(
+                          slot.mode == 'online' ? 'Онлайн' : 'Офлайн',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    _MetaRow(
-                      icon: Icons.calendar_today_outlined,
-                      label: formatSlotDayRange(slot.startsAt, slot.endsAt),
-                    ),
-                    const SizedBox(height: 8),
-                    _MetaRow(
-                      icon: Icons.account_balance_wallet_outlined,
-                      label: MoneyFormatter.format(
-                        request.quotedPriceMinor,
-                        currency: request.quotedCurrency,
-                      ),
-                      emphasize: true,
-                    ),
-                    const SizedBox(height: 8),
-                    if (request.isPending)
-                      _DeadlineRow(expiresAt: request.expiresAt)
-                    else
-                      _MetaRow(
-                        icon: Icons.info_outline_rounded,
-                        label: _terminalLabel(request.status),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
           if (request.isPending) ...[
-            const SizedBox(height: 16),
-            FyButton.primary(
-              label: 'Принять',
-              icon: Icons.check_rounded,
-              size: FyButtonSize.medium,
-              onPressed: processing ? null : onAccept,
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      backgroundColor: AppColors.primarySoft,
+                      foregroundColor: AppColors.primary,
+                    ),
+                    onPressed: processing ? null : onAccept,
+                    icon: const Icon(Icons.check_rounded),
+                    label: const Text('Принять'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                    onPressed: processing ? null : onAlternate,
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('Другое время', maxLines: 1),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            FyButton.secondary(
-              label: 'Другое время',
-              icon: Icons.event_available_outlined,
-              size: FyButtonSize.medium,
-              onPressed: processing ? null : onAlternate,
-            ),
-            const SizedBox(height: 8),
-            FyButton.danger(
-              label: 'Отклонить',
-              icon: Icons.close_rounded,
-              size: FyButtonSize.medium,
-              onPressed: processing ? null : onReject,
+            Align(
+              alignment: Alignment.center,
+              child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                onPressed: processing ? null : onReject,
+                child: const Text('Отклонить'),
+              ),
             ),
           ],
         ],
       ),
     );
   }
+
+  (FyStatus, String) _status(DateTime clock) => switch (request.status) {
+    BookingRequestStatus.pending => (
+      FyStatus.waiting,
+      formatTimeLeft(request.expiresAt.difference(clock)),
+    ),
+    BookingRequestStatus.accepted => (FyStatus.confirmed, 'Принята'),
+    BookingRequestStatus.rejected => (FyStatus.noShow, 'Отклонена'),
+    BookingRequestStatus.withdrawn => (FyStatus.cancelled, 'Отозвана учеником'),
+    BookingRequestStatus.expired => (FyStatus.cancelled, 'Истекла'),
+  };
 }
 
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({
-    required this.icon,
-    required this.label,
-    this.emphasize = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.textMuted),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+/// Compact time left to answer: «5 ч», «40 мин», «1 д».
+String formatTimeLeft(Duration remaining) {
+  if (remaining.inMinutes <= 0) return 'Срок вышел';
+  if (remaining.inHours >= 24) return '${remaining.inDays} д';
+  if (remaining.inHours >= 1) return '${remaining.inHours} ч';
+  return '${remaining.inMinutes} мин';
 }
-
-class _DeadlineRow extends StatelessWidget {
-  const _DeadlineRow({required this.expiresAt});
-
-  final DateTime expiresAt;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.schedule_rounded, size: 18, color: AppColors.warning),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            formatReplyBy(expiresAt),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.warning,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        _CountdownText(expiresAt: expiresAt),
-      ],
-    );
-  }
-}
-
-class _CountdownText extends StatefulWidget {
-  const _CountdownText({required this.expiresAt});
-
-  final DateTime expiresAt;
-
-  @override
-  State<_CountdownText> createState() => _CountdownTextState();
-}
-
-class _CountdownTextState extends State<_CountdownText> {
-  Timer? _timer;
-  late Duration _remaining;
-
-  @override
-  void initState() {
-    super.initState();
-    _remaining = widget.expiresAt.difference(DateTime.now());
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _remaining = widget.expiresAt.difference(DateTime.now());
-      });
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _CountdownText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.expiresAt != widget.expiresAt) {
-      _remaining = widget.expiresAt.difference(DateTime.now());
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      formatCountdown(_remaining),
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: AppColors.warning,
-        fontWeight: FontWeight.w700,
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-  }
-}
-
-String _terminalLabel(BookingRequestStatus status) => switch (status) {
-  BookingRequestStatus.pending => 'Ожидает решения',
-  BookingRequestStatus.accepted => 'Принята',
-  BookingRequestStatus.rejected => 'Отклонена',
-  BookingRequestStatus.withdrawn => 'Отозвана учеником',
-  BookingRequestStatus.expired => 'Истекла',
-};
