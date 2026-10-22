@@ -70,7 +70,7 @@ void main() {
     expect(find.byKey(const Key('calendar-day-view')), findsOneWidget);
     expect(find.byKey(const Key('calendar-date-strip')), findsOneWidget);
     expect(find.byKey(const Key('calendar-day-title')), findsOneWidget);
-    expect(find.text('Воскресенье, 19 июля'), findsOneWidget);
+    expect(find.text('Воскресенье · сегодня'), findsOneWidget);
     expect(find.byKey(const Key('calendar-day-timeline')), findsOneWidget);
     expect(find.byKey(const Key('calendar-prev')), findsOneWidget);
     expect(find.byKey(const Key('calendar-next')), findsOneWidget);

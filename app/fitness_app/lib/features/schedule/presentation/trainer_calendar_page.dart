@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_route_observer.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_radii.dart';
 import '../../../core/widgets/fy_card.dart';
 import '../../../core/widgets/fy_info_banner.dart';
-import '../../../core/widgets/fy_segmented_control.dart';
-import '../../../core/widgets/fy_top_bar.dart';
 import '../../booking_requests/data/booking_requests_repository.dart';
 import '../../booking_requests/presentation/trainer_inbox_page.dart';
 import '../data/recurring_booking_models.dart';
@@ -307,82 +306,212 @@ class _TrainerCalendarViewState extends State<_TrainerCalendarView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: FyTopBar(
-        title: 'Расписание',
-        actions: [
-          IconButton(
-            key: const Key('schedule-recurring-button'),
-            tooltip: 'Регулярные',
-            icon: const Icon(Icons.event_repeat_rounded),
-            onPressed: () => context.push('/schedule/recurring'),
-          ),
-          IconButton(
-            key: const Key('schedule-journal-button'),
-            tooltip: 'Журнал тренировок',
-            icon: const Icon(Icons.list_alt_rounded),
-            onPressed: () => context.push('/sessions'),
-          ),
-        ],
-      ),
-      floatingActionButton: _section == _ScheduleSection.calendar
-          ? FloatingActionButton(
-              key: const Key('calendar-create-fab'),
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onPrimary,
-              shape: const CircleBorder(),
-              onPressed: () => _openCreateActions(context),
-              child: const Icon(Icons.add),
-            )
-          : null,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: BlocBuilder<CalendarBloc, CalendarState>(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Расписание',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                  _HeaderIconButton(
+                    buttonKey: const Key('schedule-recurring-button'),
+                    tooltip: 'Регулярные тренировки',
+                    icon: Icons.event_repeat_rounded,
+                    onPressed: () => context.push('/schedule/recurring'),
+                  ),
+                  if (_section == _ScheduleSection.calendar) ...[
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      key: const Key('calendar-create-fab'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      onPressed: () => _openCreateActions(context),
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text('Добавить'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            BlocBuilder<CalendarBloc, CalendarState>(
               buildWhen: (previous, current) =>
                   previous.pendingRequestCount != current.pendingRequestCount,
               builder: (context, state) {
-                return FySegmentedControl<_ScheduleSection>(
+                return _SectionTabs(
                   value: _section,
+                  pendingCount: state.pendingRequestCount,
                   onChanged: _onSectionChanged,
-                  segments: [
-                    const FySegment(
-                      segmentKey: Key('schedule-tab-calendar'),
-                      value: _ScheduleSection.calendar,
-                      label: 'Календарь',
-                    ),
-                    FySegment(
-                      segmentKey: const Key('schedule-tab-requests'),
-                      value: _ScheduleSection.requests,
-                      label: 'Заявки',
-                      badgeCount: state.pendingRequestCount,
-                    ),
-                    const FySegment(
-                      segmentKey: Key('schedule-tab-availability'),
-                      value: _ScheduleSection.availability,
-                      label: 'Доступность',
-                    ),
-                  ],
                 );
               },
             ),
+            Expanded(
+              child: IndexedStack(
+                index: _section.index,
+                children: [
+                  _CalendarTab(
+                    onEventTap: (event) => _onEventTap(context, event),
+                    onEmptyHourTap: (hour) =>
+                        _openCreateActions(context, prefillHour: hour),
+                  ),
+                  const TrainerInboxPage(),
+                  const AvailabilityEditorPage(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    required this.buttonKey,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final Key buttonKey;
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.control),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: InkWell(
+          key: buttonKey,
+          customBorder: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.control),
           ),
-          Expanded(
-            child: IndexedStack(
-              index: _section.index,
-              children: [
-                _CalendarTab(
-                  onEventTap: (event) => _onEventTap(context, event),
-                  onEmptyHourTap: (hour) =>
-                      _openCreateActions(context, prefillHour: hour),
-                ),
-                const TrainerInboxPage(),
-                const AvailabilityEditorPage(),
-              ],
+          onTap: onPressed,
+          child: SizedBox.square(
+            dimension: 44,
+            child: Icon(icon, color: AppColors.textPrimary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Underlined section tabs: Календарь · Заявки (count) · Доступность.
+class _SectionTabs extends StatelessWidget {
+  const _SectionTabs({
+    required this.value,
+    required this.pendingCount,
+    required this.onChanged,
+  });
+
+  final _ScheduleSection value;
+  final int pendingCount;
+  final ValueChanged<_ScheduleSection> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Widget tab(_ScheduleSection section, String label, Key key, {int? count}) {
+      final selected = section == value;
+      return InkWell(
+        key: key,
+        onTap: selected ? null : () => onChanged(section),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
+          margin: const EdgeInsets.only(right: 20),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? AppColors.primary : Colors.transparent,
+                width: 3,
+              ),
             ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: selected ? AppColors.primary : AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (count != null && count > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  key: const Key('schedule-requests-badge'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            tab(
+              _ScheduleSection.calendar,
+              'Календарь',
+              const Key('schedule-tab-calendar'),
+            ),
+            tab(
+              _ScheduleSection.requests,
+              'Заявки',
+              const Key('schedule-tab-requests'),
+              count: pendingCount,
+            ),
+            tab(
+              _ScheduleSection.availability,
+              'Доступность',
+              const Key('schedule-tab-availability'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -437,10 +566,9 @@ class _CalendarTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Material(
-              color: Theme.of(context).colorScheme.surface,
-              elevation: 0.5,
+              color: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
                 child: CalendarToolbar(
                   mode: state.mode,
                   anchorDate: state.anchorDate,
@@ -469,7 +597,7 @@ class _CalendarTab extends StatelessWidget {
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                   children: [
                     if (state.errorMessage != null) ...[
                       FyInfoBanner(

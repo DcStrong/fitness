@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/fy_motion.dart';
 import '../../domain/calendar_events.dart';
 import 'calendar_date_strip.dart';
 import 'calendar_day_timeline.dart';
-import 'calendar_period_format.dart';
 
 class CalendarDayView extends StatelessWidget {
   const CalendarDayView({
@@ -46,7 +44,7 @@ class CalendarDayView extends StatelessWidget {
             onSelectDate: onSelectDate,
             now: now,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           AnimatedSwitcher(
             duration: reduceMotion ? Duration.zero : FyMotion.daySwitch,
             switchInCurve: Curves.easeOut,
@@ -64,27 +62,13 @@ class CalendarDayView extends StatelessWidget {
             },
             child: KeyedSubtree(
               key: ValueKey(dayKey.toIso8601String()),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    key: const Key('calendar-day-title'),
-                    formatCalendarDayTitle(selectedDate),
-                    softWrap: true,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  CalendarDayTimeline(
-                    events: events,
-                    selectedDate: selectedDate,
-                    workingHours: workingHours,
-                    onEventTap: onEventTap,
-                    onEmptyHourTap: onEmptyHourTap,
-                  ),
-                ],
+              child: CalendarDayTimeline(
+                events: events,
+                selectedDate: selectedDate,
+                workingHours: workingHours,
+                onEventTap: onEventTap,
+                onEmptyHourTap: onEmptyHourTap,
+                now: now,
               ),
             ),
           ),

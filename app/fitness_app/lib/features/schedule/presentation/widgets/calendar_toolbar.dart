@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/fy_segmented_control.dart';
 import '../../domain/calendar_range.dart';
 import 'calendar_period_format.dart';
 
@@ -25,81 +27,123 @@ class CalendarToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final todayVisible = rangeContainsToday(
-      mode,
-      anchorDate,
-      now ?? DateTime.now(),
-    );
+    final theme = Theme.of(context);
+    final clock = now ?? DateTime.now();
+    final todayVisible = rangeContainsToday(mode, anchorDate, clock);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.center,
-            child: SegmentedButton<CalendarMode>(
-              segments: const [
-                ButtonSegment(
-                  value: CalendarMode.day,
-                  label: Text('День', key: Key('calendar-mode-day')),
-                ),
-                ButtonSegment(
-                  value: CalendarMode.week,
-                  label: Text('Неделя', key: Key('calendar-mode-week')),
-                ),
-                ButtonSegment(
-                  value: CalendarMode.month,
-                  label: Text('Месяц', key: Key('calendar-mode-month')),
-                ),
-              ],
-              selected: {mode},
-              onSelectionChanged: (selection) => onModeChanged(selection.first),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
         Row(
           children: [
-            IconButton(
-              key: const Key('calendar-prev'),
-              tooltip: 'Назад',
-              visualDensity: VisualDensity.compact,
-              onPressed: onPrevious,
-              icon: const Icon(Icons.chevron_left_rounded),
-            ),
             Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  formatCalendarPeriodTitle(mode, anchorDate),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formatCalendarPeriodTitle(mode, anchorDate),
+                    key: const Key('calendar-period-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
+                  if (mode == CalendarMode.day)
+                    Text(
+                      formatCalendarPeriodSubtitle(mode, anchorDate, clock),
+                      key: const Key('calendar-day-title'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
               ),
             ),
-            IconButton(
-              key: const Key('calendar-next'),
+            if (!todayVisible)
+              TextButton(
+                key: const Key('calendar-today'),
+                onPressed: onToday,
+                child: const Text('Сегодня'),
+              ),
+            _NavButton(
+              buttonKey: const Key('calendar-prev'),
+              tooltip: 'Назад',
+              icon: Icons.chevron_left_rounded,
+              onPressed: onPrevious,
+            ),
+            const SizedBox(width: 6),
+            _NavButton(
+              buttonKey: const Key('calendar-next'),
               tooltip: 'Вперёд',
-              visualDensity: VisualDensity.compact,
+              icon: Icons.chevron_right_rounded,
               onPressed: onNext,
-              icon: const Icon(Icons.chevron_right_rounded),
             ),
           ],
         ),
-        if (!todayVisible)
-          Align(
-            alignment: Alignment.center,
-            child: TextButton(
-              key: const Key('calendar-today'),
-              onPressed: onToday,
-              child: const Text('Сегодня'),
+        const SizedBox(height: 12),
+        FySegmentedControl<CalendarMode>(
+          value: mode,
+          onChanged: onModeChanged,
+          segments: const [
+            FySegment(
+              segmentKey: Key('calendar-mode-day'),
+              value: CalendarMode.day,
+              label: 'День',
             ),
-          ),
+            FySegment(
+              segmentKey: Key('calendar-mode-week'),
+              value: CalendarMode.week,
+              label: 'Неделя',
+            ),
+            FySegment(
+              segmentKey: Key('calendar-mode-month'),
+              value: CalendarMode.month,
+              label: 'Месяц',
+            ),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    required this.buttonKey,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final Key buttonKey;
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: InkWell(
+          key: buttonKey,
+          customBorder: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          onTap: onPressed,
+          child: SizedBox.square(
+            dimension: 40,
+            child: Icon(icon, color: AppColors.textPrimary),
+          ),
+        ),
+      ),
     );
   }
 }
