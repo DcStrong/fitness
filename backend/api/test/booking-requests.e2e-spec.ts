@@ -576,7 +576,7 @@ describe('Заявки на бронирование (e2e)', () => {
     expect(persisted).toEqual([{ sessions: 1, charges: 1 }]);
   });
 
-  it('alternate откатывается при исчезнувшей relationship', async () => {
+  it('alternate создаёт отсутствующую relationship', async () => {
     const original = await createSlot(60, 45, 'offline');
     const created = await createBookingRequest(original.body.id);
     await dataSource.query(
@@ -584,29 +584,23 @@ describe('Заявки на бронирование (e2e)', () => {
        WHERE "coach_id" = $1 AND "student_id" = $2`,
       [coachId, studentId],
     );
-    const before = await dataSource.query(
-      `SELECT COUNT(*)::int AS "count" FROM "schedule_slots"
-       WHERE "coach_id" = $1`,
-      [coachId],
-    );
-    await request(app.getHttpServer())
+    const accepted = await request(app.getHttpServer())
       .post(`/booking-requests/${created.body.id}/alternate`)
       .set('Authorization', `Bearer ${coachToken}`)
       .send({
         startsAt: futureDate(64).toISOString(),
       })
-      .expect(403);
-    const after = await dataSource.query(
-      `SELECT COUNT(*)::int AS "count" FROM "schedule_slots"
-       WHERE "coach_id" = $1`,
-      [coachId],
-    );
-    expect(after).toEqual(before);
+      .expect(201);
+    expect(accepted.body).toMatchObject({
+      status: 'accepted',
+      resolution: 'alternate_slot',
+    });
     expect(
       await dataSource.query(
-        `SELECT "status", "session_id" FROM "booking_requests" WHERE "id" = $1`,
-        [created.body.id],
+        `SELECT COUNT(*)::int AS "count" FROM "coach_student_links"
+         WHERE "coach_id" = $1 AND "student_id" = $2`,
+        [coachId, studentId],
       ),
-    ).toEqual([{ status: 'pending', session_id: null }]);
+    ).toEqual([{ count: 1 }]);
   });
 });
