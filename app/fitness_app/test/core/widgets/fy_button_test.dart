@@ -1,4 +1,5 @@
 import 'package:fitness_app/app/theme/app_colors.dart';
+import 'package:fitness_app/app/theme/app_radii.dart';
 import 'package:fitness_app/app/theme/app_theme.dart';
 import 'package:fitness_app/core/widgets/fy_button.dart';
 import 'package:flutter/material.dart';
@@ -12,21 +13,28 @@ void main() {
     ),
   );
 
-  testWidgets('primary large is stadium pill at 54', (tester) async {
+  testWidgets('primary large is a 52 px control with DS radius', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       wrap(FyButton.primary(label: 'Войти', onPressed: () {})),
     );
 
     final button = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(tester.getSize(find.byType(FilledButton)).height, 54);
-    expect(button.style?.shape?.resolve(<WidgetState>{}), isA<StadiumBorder>());
+    expect(tester.getSize(find.byType(FilledButton)).height, 52);
+    expect(
+      button.style?.shape?.resolve(<WidgetState>{}),
+      const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
+      ),
+    );
     expect(
       button.style?.backgroundColor?.resolve(<WidgetState>{}),
       AppColors.primary,
     );
   });
 
-  testWidgets('medium card actions are 44 and keep pill shape', (tester) async {
+  testWidgets('medium card actions are 44', (tester) async {
     await tester.pumpWidget(
       wrap(
         Column(

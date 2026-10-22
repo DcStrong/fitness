@@ -1,37 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_radii.dart';
+import '../../app/theme/app_theme.dart';
 import 'fy_motion.dart';
 
 /// Visual role for [FyButton].
 enum FyButtonVariant {
-  /// Filled primary CTA (`#166246`).
+  /// Filled primary CTA (`#166246`) — one per screen.
   primary,
 
-  /// Outlined primary — secondary actions.
+  /// Outlined — secondary actions.
   secondary,
 
   /// Outlined error — destructive / decline.
   danger,
 
-  /// Soft beige fill — quiet utility actions (copy, bulk).
+  /// Tonal (primary soft fill) — quiet actions inside cards and lists.
   soft,
 }
 
-/// Density presets — always [StadiumBorder] (pill), never boxy radius.
+/// Density presets — radius [AppRadii.control] for every size.
 enum FyButtonSize {
-  /// Auth / form CTAs — matches [FyPrimaryButton] and theme (54).
+  /// Main action of a screen (52).
   large,
 
-  /// Dense card actions (inbox, sheets).
+  /// Actions inside cards and lists (44).
   medium,
 }
 
 /// Shared Fitness Yoda action button.
 ///
 /// Prefer this over raw [FilledButton] / [OutlinedButton] so height, pill
-/// shape and variants stay consistent across the app.
+/// radius and variants stay consistent across the app.
 class FyButton extends StatefulWidget {
   const FyButton({
     required this.label,
@@ -93,7 +94,7 @@ class FyButton extends StatefulWidget {
   final bool fullWidth;
 
   static double heightFor(FyButtonSize size) => switch (size) {
-    FyButtonSize.large => 54,
+    FyButtonSize.large => 52,
     FyButtonSize.medium => 44,
   };
 
@@ -183,16 +184,16 @@ class _FyButtonState extends State<FyButton> {
     FyButtonVariant.primary => AppColors.onPrimary,
     FyButtonVariant.secondary => AppColors.primary,
     FyButtonVariant.danger => AppColors.error,
-    FyButtonVariant.soft => AppColors.textPrimary,
+    FyButtonVariant.soft => AppColors.primary,
   };
 
   ButtonStyle _filledStyle({required double height, required double fontSize}) {
     final isSoft = widget.variant == FyButtonVariant.soft;
     return FilledButton.styleFrom(
-      backgroundColor: isSoft ? AppColors.softFill : AppColors.primary,
-      foregroundColor: isSoft ? AppColors.textPrimary : AppColors.onPrimary,
+      backgroundColor: isSoft ? AppColors.primarySoft : AppColors.primary,
+      foregroundColor: isSoft ? AppColors.primary : AppColors.onPrimary,
       disabledBackgroundColor: isSoft
-          ? AppColors.softFill.withValues(alpha: 0.5)
+          ? AppColors.sunken
           : AppColors.primary.withValues(alpha: widget.isLoading ? 1 : 0.4),
       disabledForegroundColor: isSoft
           ? AppColors.textMuted
@@ -204,11 +205,13 @@ class _FyButtonState extends State<FyButton> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.standard,
-      shape: const StadiumBorder(),
-      textStyle: GoogleFonts.plusJakartaSans(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
+      ),
+      textStyle: TextStyle(
+        fontFamily: AppTheme.fontFamily,
         fontSize: fontSize,
-        fontWeight: FontWeight.w600,
-        color: isSoft ? AppColors.textPrimary : AppColors.onPrimary,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -229,12 +232,19 @@ class _FyButtonState extends State<FyButton> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.standard,
-      side: BorderSide(color: color, width: 1.5),
-      shape: const StadiumBorder(),
-      textStyle: GoogleFonts.plusJakartaSans(
+      side: BorderSide(
+        color: widget.variant == FyButtonVariant.danger
+            ? color
+            : AppColors.borderStrong,
+        width: 1.5,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
+      ),
+      textStyle: TextStyle(
+        fontFamily: AppTheme.fontFamily,
         fontSize: fontSize,
-        fontWeight: FontWeight.w600,
-        color: color,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

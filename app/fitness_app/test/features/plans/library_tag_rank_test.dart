@@ -14,17 +14,12 @@ void main() {
       tag('4', 'Г'),
       tag('5', 'Д'),
     ];
-    expect(
-      compactLibraryTags(all: all, selectedIds: {}, usage: {}),
-      all,
-    );
+    expect(compactLibraryTags(all: all, selectedIds: {}, usage: {}), all);
     expect(showLibraryTagsMore(all), isFalse);
   });
 
   test('больше пяти — топ по частоте и Ещё', () {
-    final all = [
-      for (var i = 1; i <= 6; i++) tag('$i', 'T$i'),
-    ];
+    final all = [for (var i = 1; i <= 6; i++) tag('$i', 'T$i')];
     final compact = compactLibraryTags(
       all: all,
       selectedIds: {},
@@ -35,9 +30,7 @@ void main() {
   });
 
   test('выбранный тег не из топа остаётся в ряду', () {
-    final all = [
-      for (var i = 1; i <= 6; i++) tag('$i', 'T$i'),
-    ];
+    final all = [for (var i = 1; i <= 6; i++) tag('$i', 'T$i')];
     final compact = compactLibraryTags(
       all: all,
       selectedIds: {'5'},

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'fy_button.dart';
 
-/// Fitness Yoda secondary (outlined stadium) action — thin wrapper over [FyButton].
+/// Fitness Yoda secondary (outlined) action — thin wrapper over [FyButton].
 class FySecondaryButton extends StatelessWidget {
   const FySecondaryButton({
     required this.label,

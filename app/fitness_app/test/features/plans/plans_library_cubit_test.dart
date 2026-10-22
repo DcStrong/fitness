@@ -201,11 +201,10 @@ void main() {
       ),
       act: (cubit) => cubit.replaceSelectedTags({'t2', 't3'}),
       expect: () => [
-        isA<PlansLibraryState>().having(
-          (s) => s.selectedTagIds,
-          'tags',
-          {'t2', 't3'},
-        ),
+        isA<PlansLibraryState>().having((s) => s.selectedTagIds, 'tags', {
+          't2',
+          't3',
+        }),
       ],
     );
 

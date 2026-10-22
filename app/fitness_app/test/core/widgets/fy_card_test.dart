@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('renders the shared soft surface and handles taps', (
+  testWidgets('renders the DS v2 card surface and handles taps', (
     tester,
   ) async {
     var tapCount = 0;
@@ -35,8 +35,9 @@ void main() {
             as BoxDecoration;
 
     expect(decoration.color, AppColors.surface);
-    expect(decoration.borderRadius, BorderRadius.circular(AppRadii.lg));
+    expect(decoration.borderRadius, BorderRadius.circular(AppRadii.card));
     expect(decoration.boxShadow, isNotEmpty);
+    expect(decoration.border, isNotNull);
 
     await tester.tap(find.text('Расписание'));
 

@@ -16,7 +16,9 @@ class FySegment<T> {
   final Key? segmentKey;
 }
 
-/// Full-width pill tabs, equal segments (library Мои / База / Упражнения).
+/// Full-width segmented control, equal segments (library Мои / База / Упражнения).
+///
+/// DS v2: sunken track, the selected segment is a raised white tile.
 class FySegmentedControl<T> extends StatelessWidget {
   const FySegmentedControl({
     required this.segments,
@@ -33,8 +35,8 @@ class FySegmentedControl<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.sunken,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
         padding: const EdgeInsets.all(4),
@@ -82,11 +84,20 @@ class _SegmentTap extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(10),
         child: Ink(
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
+            color: selected ? AppColors.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: AppColors.shadowStrong,
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
+                    ),
+                  ]
+                : null,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
@@ -102,9 +113,9 @@ class _SegmentTap extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: selected
-                          ? AppColors.onPrimary
-                          : AppColors.textMuted,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                       fontSize: 14,
                       height: 1.1,
                     ),
@@ -115,9 +126,7 @@ class _SegmentTap extends StatelessWidget {
                   DecoratedBox(
                     key: const Key('schedule-requests-badge'),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.onPrimary.withValues(alpha: 0.22)
-                          : AppColors.primary,
+                      color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Padding(
@@ -127,8 +136,8 @@ class _SegmentTap extends StatelessWidget {
                       ),
                       child: Text(
                         '$count',
-                        style: TextStyle(
-                          color: AppColors.onPrimary,
+                        style: const TextStyle(
+                          color: AppColors.primary,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           height: 1,
