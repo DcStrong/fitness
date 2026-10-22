@@ -64,13 +64,17 @@ class FyStatusChip extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: fg),
             const SizedBox(width: 6),
-            Text(
-              label ?? defaultLabel(status),
-              style: TextStyle(
-                color: fg,
-                fontSize: 12,
-                height: 16 / 12,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                label ?? defaultLabel(status),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 12,
+                  height: 16 / 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

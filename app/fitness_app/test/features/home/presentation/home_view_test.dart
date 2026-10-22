@@ -40,7 +40,7 @@ void main() {
   );
   final now = DateTime(2026, 7, 19, 12);
 
-  testWidgets('trainer sees daily schedule and collapsed history', (
+  testWidgets('trainer sees hero, counters, week and the whole day', (
     tester,
   ) async {
     final repository = _MockScheduleRepository();
@@ -66,58 +66,37 @@ void main() {
 
     await _pumpHome(tester, cubit: cubit, user: trainer);
 
-    expect(find.text('19 ИЮЛЯ'), findsOneWidget);
-    expect(find.byKey(const Key('home-date-chip')), findsOneWidget);
-    expect(find.text('Сегодня, 19 июл'), findsOneWidget);
-    expect(find.text('На неделе'), findsOneWidget);
+    expect(find.text('Воскресенье, 19 июля'), findsOneWidget);
+    expect(find.text('Главная'), findsOneWidget);
     expect(find.byKey(const Key('home-qr-invite')), findsOneWidget);
-    expect(find.byKey(const Key('home-week-strip')), findsOneWidget);
+    expect(find.byKey(const Key('home-next-session')), findsOneWidget);
+    expect(
+      find.textContaining('Идёт сейчас', findRichText: true),
+      findsWidgets,
+    );
     expect(find.byKey(const Key('home-stat-chips')), findsOneWidget);
-    expect(find.text('История 1'), findsOneWidget);
-    expect(find.byKey(const Key('home-history-session-past')), findsNothing);
-    expect(find.text('Идёт сейчас'), findsOneWidget);
-    expect(find.text('Запланирована'), findsOneWidget);
-    await tester.drag(
-      find.byKey(const Key('home-scroll')),
-      const Offset(0, -500),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('home-bento-shortcuts')), findsOneWidget);
-    expect(find.byKey(const Key('home-bento-finance')), findsOneWidget);
-    expect(find.byKey(const Key('home-week-sparkline')), findsOneWidget);
-    expect(find.byKey(const Key('home-bento-schedule-go')), findsOneWidget);
-    expect(find.byKey(const Key('home-bento-recurring-go')), findsOneWidget);
-    expect(find.text('Перейти'), findsNWidgets(4));
-    await tester.drag(
-      find.byKey(const Key('home-scroll')),
-      const Offset(0, 500),
-    );
-    await tester.pumpAndSettle();
+    expect(find.text('На неделе'), findsOneWidget);
+    expect(find.byKey(const Key('home-week-bars')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('home-history-toggle')));
-    await tester.pump();
-
-    expect(find.byKey(const Key('home-history-session-past')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home-today-session-future')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const Key('home-today-session-past')), findsOneWidget);
     expect(find.text('Проведена'), findsOneWidget);
+    expect(find.text('Запланирована'), findsOneWidget);
 
-    expect(find.byKey(const Key('home-upcoming-toggle')), findsOneWidget);
-    expect(find.textContaining('Предстоящие тренировки'), findsOneWidget);
-    expect(find.text('Идёт сейчас'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('home-upcoming-toggle')));
-    await tester.pump();
-
-    expect(find.text('Идёт сейчас'), findsNothing);
-    expect(find.text('Запланирована'), findsNothing);
-
-    await tester.tap(find.byKey(const Key('home-upcoming-toggle')));
-    await tester.pump();
-
-    expect(find.text('Идёт сейчас'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home-bento-finance')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const Key('home-bento-shortcuts')), findsOneWidget);
     await cubit.close();
   });
 
-  testWidgets('home session row shows attached workout title', (tester) async {
+  testWidgets('hero opens the next session', (tester) async {
     final repository = _MockScheduleRepository();
     _stubSessions(repository, [
       _session(
@@ -125,15 +104,38 @@ void main() {
         startsAt: DateTime(2026, 7, 19, 15),
         endsAt: DateTime(2026, 7, 19, 16),
         planTitle: 'Жим лёжа',
+        studentDisplayName: 'Алина Козлова',
       ),
     ]);
     final cubit = await _loadedCubit(repository, now);
     await _pumpHome(tester, cubit: cubit, user: trainer);
+
     expect(
-      find.byKey(const Key('home-upcoming-session-future')),
+      find.textContaining('Через 3 ч', findRichText: true),
       findsOneWidget,
     );
+    expect(find.text('АК'), findsOneWidget);
     expect(find.text('Жим лёжа'), findsWidgets);
+    expect(find.text('Алина Козлова'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('home-next-session-open')));
+    await tester.pumpAndSettle();
+    expect(find.text('Session future'), findsOneWidget);
+    await cubit.close();
+  });
+
+  testWidgets('empty week offers the schedule instead of a session', (
+    tester,
+  ) async {
+    final repository = _MockScheduleRepository();
+    _stubSessions(repository, const []);
+    final cubit = await _loadedCubit(repository, now);
+    await _pumpHome(tester, cubit: cubit, user: trainer);
+
+    expect(find.text('На этой неделе занятий больше нет'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('home-next-session-empty-action')));
+    await tester.pumpAndSettle();
+    expect(find.text('Schedule destination'), findsOneWidget);
     await cubit.close();
   });
 
@@ -162,9 +164,15 @@ void main() {
     await _pumpHome(tester, cubit: cubit, user: student);
 
     expect(find.byKey(const Key('home-qr-invite')), findsNothing);
-    expect(find.byKey(const Key('home-date-chip')), findsNothing);
+    expect(find.byKey(const Key('home-stat-chips')), findsNothing);
+    expect(find.byKey(const Key('home-week-bars')), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Тренеры'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Тренировки'), findsOneWidget);
-    expect(find.text('Записаться'), findsOneWidget);
+    expect(find.text('Записаться'), findsWidgets);
     expect(find.text('Тренеры'), findsOneWidget);
     expect(find.text('Финансы'), findsNothing);
     await cubit.close();
@@ -226,7 +234,10 @@ void main() {
     await _pumpHome(tester, cubit: cubit, user: trainer);
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byKey(const Key('home-bento-schedule')), findsOneWidget);
+    expect(
+      find.byKey(const Key('home-bento-schedule'), skipOffstage: false),
+      findsOneWidget,
+    );
     completer.complete(const []);
     await tester.pumpAndSettle();
     await cubit.close();
@@ -263,32 +274,6 @@ void main() {
 
     expect(find.text('Сегодня тренировок нет.'), findsOneWidget);
     expect(attempts, 2);
-    await cubit.close();
-  });
-
-  testWidgets('trainer timeline uses initials when the session has no avatar', (
-    tester,
-  ) async {
-    final repository = _MockScheduleRepository();
-    _stubSessions(repository, [
-      _session(
-        id: 'future',
-        startsAt: DateTime(2026, 7, 19, 15),
-        endsAt: DateTime(2026, 7, 19, 16),
-        studentDisplayName: 'Алина Козлова',
-      ),
-    ]);
-    final cubit = await _loadedCubit(repository, now);
-
-    await _pumpHome(tester, cubit: cubit, user: trainer);
-
-    expect(
-      find.byKey(const Key('home-avatar-initials-future')),
-      findsOneWidget,
-    );
-    expect(find.text('АК'), findsOneWidget);
-    expect(find.text('15:00'), findsOneWidget);
-    expect(find.text('Алина Козлова'), findsOneWidget);
     await cubit.close();
   });
 
@@ -413,6 +398,11 @@ Future<void> _pumpHome(
         path: '/invite',
         builder: (context, state) =>
             const Scaffold(body: Text('Invite destination')),
+      ),
+      GoRoute(
+        path: '/sessions/:id',
+        builder: (context, state) =>
+            Scaffold(body: Text('Session ${state.pathParameters['id']}')),
       ),
       GoRoute(
         path: '/sessions',
