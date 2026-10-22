@@ -43,7 +43,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(SingleChildScrollView), findsOneWidget);
-    expect(find.text('С возвращением!'), findsOneWidget);
+    expect(find.text('С возвращением'), findsOneWidget);
     expect(find.text('Войти'), findsOneWidget);
     expect(tester.takeException(), isNull);
 

@@ -38,6 +38,40 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _showInviteHelp(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Приглашение от тренера',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Отсканируйте QR-код камерой телефона или откройте ссылку '
+                'от тренера. Приложение запомнит приглашение: войдите или '
+                'зарегистрируйтесь, и тренер появится у вас автоматически.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Понятно'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,8 +80,17 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context, state) {
             return AuthScreenLayout(
               heroTagline: 'Двигайтесь осознанно. Становитесь сильнее.',
+              footer: OutlinedButton.icon(
+                key: const Key('login-qr-invite'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                onPressed: () => _showInviteHelp(context),
+                icon: const Icon(Icons.qr_code_2_rounded),
+                label: const Text('Есть QR-приглашение от тренера'),
+              ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
                 child: AutofillGroup(
                   child: Form(
                     key: _formKey,
@@ -55,23 +98,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'С возвращением!',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                          textAlign: TextAlign.center,
+                          'С возвращением',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Продолжайте двигаться к своим целям.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 18),
                         FyInputCard(
-                          label: 'Email',
+                          label: 'Почта',
                           icon: Icons.email_outlined,
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
@@ -141,21 +174,32 @@ class _LoginScreenState extends State<LoginScreen> {
                             textAlign: TextAlign.center,
                           ),
                         ],
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                         FyPrimaryButton(
                           label: 'Войти',
                           onPressed: state.isSubmitting ? null : _submit,
                           isLoading: state.isSubmitting,
                         ),
-                        const SizedBox(height: 14),
-                        TextButton(
-                          onPressed: state.isSubmitting
-                              ? null
-                              : () {
-                                  context.read<AuthCubit>().clearError();
-                                  context.go('/register');
-                                },
-                          child: const Text('Нет аккаунта? Зарегистрироваться'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Нет аккаунта?',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            TextButton(
+                              key: const Key('login-register'),
+                              onPressed: state.isSubmitting
+                                  ? null
+                                  : () {
+                                      context.read<AuthCubit>().clearError();
+                                      context.go('/register');
+                                    },
+                              child: const Text('Зарегистрироваться'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
