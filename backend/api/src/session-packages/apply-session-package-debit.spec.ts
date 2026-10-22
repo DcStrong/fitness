@@ -16,7 +16,7 @@ describe('applySessionPackageDebit', () => {
     const saved: unknown[] = [];
     return {
       manager: {
-        findOne: jest.fn(async (entity: unknown, options: { where: Record<string, unknown> }) => {
+        findOne: jest.fn(async (entity: unknown, _options: { where: Record<string, unknown> }) => {
           if (entity === SessionPackageEntity) {
             return opts.pkg ?? null;
           }
