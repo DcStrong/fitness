@@ -95,11 +95,8 @@ void main() {
 
     await tester.pumpWidget(buildSubject(const RegisterScreen()));
 
-    await tester.enterText(
-      find.byType(TextFormField).at(0),
-      'student@example.com',
-    );
-    await tester.enterText(find.byType(TextFormField).at(1), 'password123');
+    await tester.enterText(find.byType(TextField).at(0), 'student@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'password123');
     await tester.ensureVisible(find.text('Ученик'));
     await tester.tap(find.text('Ученик'));
     await tester.ensureVisible(find.text('Зарегистрироваться'));

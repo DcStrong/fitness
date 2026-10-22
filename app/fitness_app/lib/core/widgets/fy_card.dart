@@ -36,17 +36,15 @@ class FyCard extends StatelessWidget {
         border: border,
         boxShadow: boxShadow,
       ),
-      child: onTap == null
-          ? content
-          : Material(
-              color: Colors.transparent,
-              borderRadius: borderRadius,
-              child: InkWell(
-                borderRadius: borderRadius,
-                onTap: onTap,
-                child: content,
-              ),
-            ),
+      // Transparent Material so ink from children (ListTile, InkWell) stays
+      // visible above the card's background.
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: borderRadius,
+        child: onTap == null
+            ? content
+            : InkWell(borderRadius: borderRadius, onTap: onTap, child: content),
+      ),
     );
   }
 }

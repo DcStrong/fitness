@@ -1,4 +1,5 @@
 import 'package:fitness_app/app/theme/app_colors.dart';
+import 'package:fitness_app/app/theme/app_radii.dart';
 import 'package:fitness_app/app/theme/app_theme.dart';
 import 'package:fitness_app/core/widgets/fy_card.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,7 @@ void main() {
             as BoxDecoration;
 
     expect(decoration.color, AppColors.surface);
-    expect(decoration.borderRadius, BorderRadius.circular(20));
+    expect(decoration.borderRadius, BorderRadius.circular(AppRadii.lg));
     expect(decoration.boxShadow, isNotEmpty);
 
     await tester.tap(find.text('Расписание'));
