@@ -39,7 +39,7 @@ Web не блокирует мобильный MVP.
 
 **Тонкий MVP (фазы 1–9) закрыт.** Schedule/coach UX (слои A–C), абонементы, workout program/progression и design волна A — закрыты (см. «Сделано после MVP»).
 
-**СЕЙЧАС:** `/opsx-propose polish-trainer-home-bento-visual` — visual pass Home к `mock-home-c-asymmetric-bento.png`. Далее: design wave C (dark theme).
+**СЕЙЧАС:** Roadmap v2 (см. ниже): этап 0 — рабочая база (CI, зелёные тесты), этап 1 — продуктовый разбор экранов. Продакшен — последним этапом.
 
 **Handoff для агента после archive:** обновить эту таблицу / post-MVP очереди, предложить `/opsx-propose` для следующей строки со статусом «СЕЙЧАС».
 
@@ -109,14 +109,32 @@ OpenSpec: `social-privacy` → archived `2026-07-19-social-privacy`
 | `workout-assign-and-session-page` | Assign workouts + session page | ✅ archived `2026-08-18-workout-assign-and-session-page` |
 | `workout-progress-and-student-hub` | Progress + student hub | ✅ archived `2026-08-18-workout-progress-and-student-hub` |
 | `workout-program-and-progression` | Program on recurring + weight progression | ✅ archived `2026-08-21-workout-program-and-progression` |
+| `polish-student-hub-session-tags-ui` | Student hub / session / tags UI polish | ✅ archived `2026-08-23-polish-student-hub-session-tags-ui` |
 
 Источник статусов дизайн-долга: [docs/design/design-system-status.md](../design/design-system-status.md).  
 Домен слоёв A/B/C: [docs/design/availability-recurring-booking.md](../design/availability-recurring-booking.md).
+
+## Roadmap v2 (с 2026-10-22)
+
+Приоритет: сначала продукт в «полноценном» состоянии и редизайн, продакшен — последним.
+Полный аудит и план: [Fitness Yoda: аудит и план](https://claude.ai/artifact/Dwyc9S7zx5Bf64nUuTD9CA).
+
+| Этап | Что | Статус |
+|------|-----|--------|
+| 0 | Рабочая база: lock-файлы, зелёные тесты, CI на PR | **СЕЙЧАС** |
+| 1 | Продуктовый разбор: скриншоты всех экранов, сценарии, UX-проблемы, IA, финальный backlog | **СЕЙЧАС** |
+| 2 | Редизайн: 2–3 концепта → выбор → дизайн-система v2 (светлая + тёмная) | очередь |
+| 3 | Фичи в новом дизайне: уведомления, чат тренер↔ученик, статистика тренера, кошелёк v2, опыт ученика, группы, аккаунт/онбординг, рефералы | очередь |
+| 4 | Перенос существующих экранов на дизайн-систему v2 | очередь |
+| 5 | Продакшен: требования сторов, инфра/деплой, безопасность, бета, релиз | очередь |
+
+Каждая фича этапа 3 — отдельный OpenSpec change. Web-консоль тренера заморожена (поддерживается в сборке).
 
 ## Post-MVP: Product (живой backlog)
 
 | # | Change (рабочее имя) | Фокус | Статус |
 |---|----------------------|--------|--------|
+| 0 | `add-coach-student-chat` | Чат 1:1 тренер↔ученик (текст, фото, непрочитанные, push) | очередь |
 | 1 | `add-notifications` | In-app (± email); позже push — ближайшее занятие, пакет, заявки, lifecycle | очередь |
 | 2 | `trainer-stats-dashboard` | Занятость / доход / no-show / остатки пакетов (экран-потребитель для волны D) | очередь |
 | 3 | `billing-invoices-wallet` | Глубже ручного биллинга: счёт/баланс ученика; **не** эквайринг | очередь |
@@ -134,8 +152,8 @@ OpenSpec: `social-privacy` → archived `2026-07-19-social-privacy`
 | **A** | `polish-mobile-design-system` | Шрифт, `FySecondaryButton`, `FyChip`, `showFyBottomSheet`, barrel, debt cleanup | ✅ archived `2026-08-08-polish-mobile-design-system` |
 | **B** | `polish-mobile-shell-auth` | Custom top bar, auth décor / hero, motion (press / tabs / auth panel / calendar day) | ✅ archived `2026-08-21-polish-mobile-shell-auth` |
 | **B+** | `polish-trainer-home-bento` | Trainer Home: week mini-calendar, stat chips, asymmetric bento | ✅ archived `2026-09-29-polish-trainer-home-bento` |
-| **B++** | `polish-trainer-home-bento-visual` | Visual fidelity к mock-home-c (stat cards, timeline, week chart, Перейти) | **СЕЙЧАС** (propose) |
-| C | _(TBD)_ | Dark theme по токенам + `ThemeMode` | очередь |
+| **B++** | `polish-trainer-home-bento-visual` | Visual fidelity к mock-home-c (stat cards, timeline, week chart, Перейти) | ✅ archived `2026-09-29-polish-trainer-home-bento-visual` |
+| C | _(TBD)_ | Dark theme по токенам + `ThemeMode` | поглощена редизайном v2 (Roadmap v2, этап 2) |
 | D | — | Parked до экрана-потребителя: metric gauge, pagination dots, twin cards, floating icon buttons, section badge `01` | parked |
 
 ### Волна A — инфраструктура DS ✅
@@ -149,7 +167,7 @@ OpenSpec: `social-privacy` → archived `2026-07-19-social-privacy`
 
 - `FyTopBar`; auth hero asset + mint décor / wave; press scale; shell tab fade+slide; auth panel entrance; calendar day switch
 
-### Волна C — theme completeness (**СЕЙЧАС**)
+### Волна C — theme completeness (поглощена редизайном v2)
 
 - `AppTheme.dark()` по токенам; достижимый `ThemeMode`
 
