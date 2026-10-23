@@ -3,13 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
-import '../../../core/widgets/fy_top_bar.dart';
+import '../../../app/theme/app_radii.dart';
+import '../../../core/widgets/fy_segmented_control.dart';
 import '../../../core/widgets/person_name_email.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/finance_models.dart';
 import '../data/money_formatter.dart';
 import 'cubit/finance_cubit.dart';
 import 'cubit/finance_state.dart';
 
+/// Finance (DS v2): period switch, a primary hero with money received, key
+/// numbers, debts as cards and the ledger as quiet rows.
 class FinanceView extends StatelessWidget {
   const FinanceView({required this.permissions, super.key});
 
@@ -20,127 +24,149 @@ class FinanceView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: FyTopBar(
-        title: 'Финансы',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/home'),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Обновить',
-            onPressed: () => context.read<FinanceCubit>().load(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
       floatingActionButton: _can('finance:record_expense')
           ? FloatingActionButton.extended(
               onPressed: () => _showExpenseDialog(context),
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
               shape: const StadiumBorder(),
-              icon: const Icon(Icons.remove),
+              icon: const Icon(Icons.remove_rounded),
               label: const Text('Расход'),
             )
           : null,
-      body: BlocConsumer<FinanceCubit, FinanceState>(
-        listenWhen: (previous, current) =>
-            previous.error != current.error && current.error != null,
-        listener: (context, state) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.error!)));
-        },
-        builder: (context, state) {
-          if (state.status == FinanceStatus.loading && state.summary == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state.status == FinanceStatus.failure && state.summary == null) {
-            return _Failure(error: state.error);
-          }
-          return RefreshIndicator(
-            onRefresh: context.read<FinanceCubit>().load,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-              children: [
-                _PeriodPicker(state: state),
-                const SizedBox(height: 16),
-                if (_can('finance:manage_settings'))
-                  _SettingsCard(
-                    settings: state.settings,
-                    onEdit: () => _showSettingsDialog(context, state.settings),
+      body: SafeArea(
+        child: BlocConsumer<FinanceCubit, FinanceState>(
+          listenWhen: (previous, current) =>
+              previous.error != current.error && current.error != null,
+          listener: (context, state) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.error!)));
+          },
+          builder: (context, state) {
+            final theme = Theme.of(context);
+            final summary = state.summary;
+            final Widget content;
+            if (state.status == FinanceStatus.loading && summary == null) {
+              content = const Center(child: CircularProgressIndicator());
+            } else if (state.status == FinanceStatus.failure &&
+                summary == null) {
+              content = _Failure(error: state.error);
+            } else {
+              content = RefreshIndicator(
+                onRefresh: context.read<FinanceCubit>().load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screen,
+                    AppSpacing.sm,
+                    AppSpacing.screen,
+                    96,
                   ),
-                if (_can('finance:manage_settings')) const SizedBox(height: 16),
-                if (state.summary case final summary?)
-                  _SummaryGrid(summary: summary),
-                const SizedBox(height: 24),
-                Text('Долги', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                if (state.debts.isEmpty)
-                  const Text('Нет неоплаченных начислений')
-                else
-                  ...state.debts.map(
-                    (debt) => _DebtTile(
-                      debt: debt,
-                      enabled:
-                          _can('finance:mark_paid') && !state.actionInProgress,
-                      onPay: () => _showPaymentDialog(context, debt),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-                Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Журнал',
-                        style: Theme.of(context).textTheme.titleLarge,
+                    _PeriodPicker(state: state),
+                    const SizedBox(height: AppSpacing.md),
+                    if (summary != null) ...[
+                      _EarnedHero(summary: summary, period: state.period),
+                      const SizedBox(height: AppSpacing.cardGap),
+                      _StatGrid(summary: summary),
+                      const SizedBox(height: AppSpacing.cardGap),
+                      _TotalsCard(summary: summary),
+                    ],
+                    if (_can('finance:manage_settings')) ...[
+                      const SizedBox(height: AppSpacing.cardGap),
+                      _SettingsCard(
+                        settings: state.settings,
+                        onEdit: () =>
+                            _showSettingsDialog(context, state.settings),
                       ),
-                    ),
-                    DropdownButton<String?>(
-                      value: state.ledgerType,
-                      hint: const Text('Все'),
-                      items: const [
-                        DropdownMenuItem(value: null, child: Text('Все')),
-                        DropdownMenuItem(
-                          value: 'income',
-                          child: Text('Доходы'),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    Text('Должны оплатить', style: theme.textTheme.titleLarge),
+                    const SizedBox(height: AppSpacing.cardGap),
+                    if (state.debts.isEmpty)
+                      const _EmptyNote(text: 'Нет неоплаченных начислений')
+                    else
+                      for (final debt in state.debts) ...[
+                        _DebtTile(
+                          debt: debt,
+                          enabled:
+                              _can('finance:mark_paid') &&
+                              !state.actionInProgress,
+                          onPay: () => _showPaymentDialog(context, debt),
                         ),
-                        DropdownMenuItem(
-                          value: 'expense',
-                          child: Text('Расходы'),
+                        const SizedBox(height: AppSpacing.cardGap),
+                      ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Журнал',
+                            style: theme.textTheme.titleLarge,
+                          ),
                         ),
-                        DropdownMenuItem(
-                          value: 'adjustment',
-                          child: Text('Корректировки'),
+                        _LedgerFilter(
+                          value: state.ledgerType,
+                          onChanged: context.read<FinanceCubit>().filterLedger,
                         ),
                       ],
-                      onChanged: (value) =>
-                          context.read<FinanceCubit>().filterLedger(value),
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (state.ledger.isEmpty)
+                      const _EmptyNote(text: 'За период нет операций')
+                    else
+                      for (final entry in state.ledger)
+                        _LedgerTile(
+                          entry: entry,
+                          canReverse:
+                              _can('finance:adjust_own') &&
+                              entry.reversesEntryId == null,
+                          onReverse: () => _confirmReverse(context, entry),
+                        ),
+                    if (state.actionInProgress) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      const LinearProgressIndicator(),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 8),
-                if (state.ledger.isEmpty)
-                  const Text('За период нет операций')
-                else
-                  ...state.ledger.map(
-                    (entry) => _LedgerTile(
-                      entry: entry,
-                      canReverse:
-                          _can('finance:adjust_own') &&
-                          entry.reversesEntryId == null,
-                      onReverse: () => _confirmReverse(context, entry),
-                    ),
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                  child: Row(
+                    children: [
+                      FySquareIconButton(
+                        buttonKey: const Key('finance-back'),
+                        tooltip: 'Назад',
+                        icon: Icons.arrow_back_rounded,
+                        onPressed: () => context.go('/more'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Финансы',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontSize: 20,
+                            height: 26 / 20,
+                          ),
+                        ),
+                      ),
+                      FySquareIconButton(
+                        tooltip: 'Обновить',
+                        icon: Icons.refresh_rounded,
+                        onPressed: () => context.read<FinanceCubit>().load(),
+                      ),
+                    ],
                   ),
-                if (state.actionInProgress) ...[
-                  const SizedBox(height: 16),
-                  const LinearProgressIndicator(),
-                ],
+                ),
+                Expanded(child: content),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -347,14 +373,26 @@ class _Failure extends StatelessWidget {
         children: [
           Text(error ?? 'Не удалось загрузить финансы'),
           const SizedBox(height: 12),
-          FilledButton(
+          FyButton.secondary(
+            label: 'Повторить',
+            fullWidth: false,
+            size: FyButtonSize.medium,
             onPressed: () => context.read<FinanceCubit>().load(),
-            child: const Text('Повторить'),
           ),
         ],
       ),
     ),
   );
+}
+
+class _EmptyNote extends StatelessWidget {
+  const _EmptyNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      FyCard(child: Text(text, style: Theme.of(context).textTheme.bodySmall));
 }
 
 class _PeriodPicker extends StatelessWidget {
@@ -364,28 +402,37 @@ class _PeriodPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    final cubit = context.read<FinanceCubit>();
+    final custom = state.period == FinancePeriod.custom;
+    return Row(
       children: [
-        for (final item in const [
-          (FinancePeriod.day, 'День'),
-          (FinancePeriod.week, 'Неделя'),
-          (FinancePeriod.month, 'Месяц'),
-        ])
-          ChoiceChip(
-            label: Text(item.$2),
-            selected: state.period == item.$1,
-            onSelected: (_) =>
-                context.read<FinanceCubit>().selectPeriod(item.$1),
+        Expanded(
+          child: FySegmentedControl<FinancePeriod>(
+            // A custom range selects nothing in the switch.
+            value: state.period,
+            segments: const [
+              FySegment(value: FinancePeriod.day, label: 'День'),
+              FySegment(value: FinancePeriod.week, label: 'Неделя'),
+              FySegment(value: FinancePeriod.month, label: 'Месяц'),
+              FySegment(value: FinancePeriod.custom, label: 'Период'),
+            ],
+            onChanged: (period) {
+              if (period == FinancePeriod.custom) {
+                _pickRange(context);
+              } else {
+                cubit.selectPeriod(period);
+              }
+            },
           ),
-        ActionChip(
-          avatar: const Icon(Icons.date_range, size: 18),
-          label: Text(
-            state.period == FinancePeriod.custom ? 'Свой период ✓' : 'Период',
-          ),
-          onPressed: () => _pickRange(context),
         ),
+        if (custom) ...[
+          const SizedBox(width: 8),
+          FySquareIconButton(
+            tooltip: 'Изменить период',
+            icon: Icons.date_range_rounded,
+            onPressed: () => _pickRange(context),
+          ),
+        ],
       ],
     );
   }
@@ -410,6 +457,163 @@ class _PeriodPicker extends StatelessWidget {
   }
 }
 
+class _EarnedHero extends StatelessWidget {
+  const _EarnedHero({required this.summary, required this.period});
+
+  final FinanceSummary summary;
+  final FinancePeriod period;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = switch (period) {
+      FinancePeriod.day => 'Получено за день',
+      FinancePeriod.week => 'Получено за неделю',
+      FinancePeriod.month => 'Получено за месяц',
+      FinancePeriod.custom => 'Получено за период',
+    };
+    return FyCard(
+      color: AppColors.primary,
+      border: null,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.onPrimaryMuted,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            MoneyFormatter.format(
+              summary.receivedMinor,
+              currency: summary.currency,
+            ),
+            key: const Key('finance-received'),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontSize: 32,
+              height: 38 / 32,
+              color: AppColors.onPrimary,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.summary});
+
+  final FinanceSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _Stat(
+              label: 'Ждёт оплаты',
+              value: MoneyFormatter.format(
+                summary.outstandingMinor,
+                currency: summary.currency,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.cardGap),
+          Expanded(
+            child: _Stat(
+              label: 'Проведено',
+              value:
+                  '${summary.counts.completed} ${_sessionsWord(summary.counts.completed)}',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FyCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The remaining figures of the period as quiet rows in one card.
+class _TotalsCard extends StatelessWidget {
+  const _TotalsCard({required this.summary});
+
+  final FinanceSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = [
+      ('Начислено', summary.accruedMinor),
+      ('Расходы', summary.expensesMinor),
+      ('Корректировки', summary.adjustmentsMinor),
+      ('Чистый доход', summary.netMinor),
+    ];
+    final theme = Theme.of(context);
+    return FyCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Column(
+        children: [
+          for (final (index, row) in rows.indexed) ...[
+            if (index > 0) const Divider(height: 1),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(row.$1, style: theme.textTheme.bodyMedium),
+                  ),
+                  Text(
+                    MoneyFormatter.format(row.$2, currency: summary.currency),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.settings, required this.onEdit});
 
@@ -417,82 +621,38 @@ class _SettingsCard extends StatelessWidget {
   final VoidCallback onEdit;
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: ListTile(
-      leading: const Icon(Icons.tune),
-      title: const Text('Цена тренировки'),
-      subtitle: Text(
-        settings == null
-            ? 'Не настроена — новые записи недоступны'
-            : MoneyFormatter.format(
-                settings!.defaultSessionPriceMinor,
-                currency: settings!.currency,
-              ),
-      ),
-      trailing: TextButton(onPressed: onEdit, child: const Text('Изменить')),
-    ),
-  );
-}
-
-class _SummaryGrid extends StatelessWidget {
-  const _SummaryGrid({required this.summary});
-
-  final FinanceSummary summary;
-
-  @override
   Widget build(BuildContext context) {
-    final items = [
-      ('Начислено', summary.accruedMinor, Icons.trending_up),
-      ('Получено', summary.receivedMinor, Icons.payments),
-      ('Ожидается', summary.outstandingMinor, Icons.schedule),
-      ('Расходы', summary.expensesMinor, Icons.trending_down),
-      ('Корректировки', summary.adjustmentsMinor, Icons.swap_horiz),
-      ('Чистый доход', summary.netMinor, Icons.account_balance_wallet),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.7,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          children: [
-            for (final item in items)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(item.$3, size: 20),
-                      const SizedBox(height: 4),
-                      Text(item.$1),
-                      Text(
-                        MoneyFormatter.format(
-                          item.$2,
-                          currency: summary.currency,
+    final theme = Theme.of(context);
+    return FyCard(
+      onTap: onEdit,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const FyIconBadge(icon: Icons.tune_rounded, size: 40, iconSize: 22),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Цена тренировки', style: theme.textTheme.titleMedium),
+                Text(
+                  settings == null
+                      ? 'Не настроена — новые записи недоступны'
+                      : MoneyFormatter.format(
+                          settings!.defaultSessionPriceMinor,
+                          currency: settings!.currency,
                         ),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
+                  style: theme.textTheme.bodySmall,
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Проведено: ${summary.counts.completed} · '
-          'Неявок к оплате: ${summary.counts.noShowChargeable} · '
-          'Оплачено: ${summary.counts.paid} · '
-          'Долгов: ${summary.counts.outstanding}',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textTertiary,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -509,53 +669,111 @@ class _DebtTile extends StatelessWidget {
   final VoidCallback onPay;
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: ListTile(
-      title: Text(
-        personPrimaryLabel(
-          displayName: debt.studentDisplayName,
-          email: debt.studentEmail,
-          fallback: debt.studentId ?? 'Ученик',
-        ),
-      ),
-      subtitle: Text(
-        [
-          if (personEmailCaption(
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final name = personPrimaryLabel(
+      displayName: debt.studentDisplayName,
+      email: debt.studentEmail,
+      fallback: debt.studentId ?? 'Ученик',
+    );
+    final email = personEmailCaption(
+      displayName: debt.studentDisplayName,
+      email: debt.studentEmail,
+    );
+    final sub = [
+      ?email,
+      debt.earnedAt == null
+          ? 'Начисление'
+          : 'Начислено ${_date(debt.earnedAt!)}',
+    ].join(' · ');
+    return FyCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              FyAvatar(
                 displayName: debt.studentDisplayName,
                 email: debt.studentEmail,
-              ) !=
-              null)
-            personEmailCaption(
-              displayName: debt.studentDisplayName,
-              email: debt.studentEmail,
-            ),
-          debt.earnedAt == null
-              ? 'Начисление'
-              : 'Начислено ${_date(debt.earnedAt!)}',
-        ].whereType<String>().join(' · '),
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            MoneyFormatter.format(debt.amountMinor, currency: debt.currency),
-          ),
-          InkWell(
-            onTap: enabled ? onPay : null,
-            child: Text(
-              'Отметить оплату',
-              style: TextStyle(
-                color: enabled
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).disabledColor,
+                size: 40,
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                MoneyFormatter.format(
+                  debt.amountMinor,
+                  currency: debt.currency,
+                ),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: FyStatusChip(status: FyStatus.waiting, label: 'Ждёт оплаты'),
+          ),
+          const SizedBox(height: 10),
+          FyButton.soft(
+            key: Key('finance-pay-${debt.chargeId}'),
+            label: 'Отметить оплату',
+            icon: Icons.check_rounded,
+            size: FyButtonSize.medium,
+            onPressed: enabled ? onPay : null,
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
+}
+
+class _LedgerFilter extends StatelessWidget {
+  const _LedgerFilter({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String?>(
+        value: value,
+        hint: const Text('Все'),
+        borderRadius: BorderRadius.circular(AppRadii.control),
+        icon: const Icon(Icons.expand_more_rounded),
+        items: const [
+          DropdownMenuItem(value: null, child: Text('Все')),
+          DropdownMenuItem(value: 'income', child: Text('Доходы')),
+          DropdownMenuItem(value: 'expense', child: Text('Расходы')),
+          DropdownMenuItem(value: 'adjustment', child: Text('Корректировки')),
+        ],
+        onChanged: onChanged,
+      ),
+    );
+  }
 }
 
 class _LedgerTile extends StatelessWidget {
@@ -571,43 +789,76 @@ class _LedgerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final label = switch (entry.type) {
       'income' => 'Доход',
       'expense' => 'Расход',
       _ => 'Корректировка',
     };
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        entry.type == 'income'
-            ? Icons.add_circle_outline
-            : entry.type == 'expense'
-            ? Icons.remove_circle_outline
-            : Icons.swap_horiz,
+    final icon = switch (entry.type) {
+      'income' => Icons.south_west_rounded,
+      'expense' => Icons.north_east_rounded,
+      _ => Icons.swap_horiz_rounded,
+    };
+    return Container(
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      title: Text(entry.category?.isNotEmpty == true ? entry.category! : label),
-      subtitle: Text(
-        [
-          _date(entry.occurredAt),
-          if (entry.note?.isNotEmpty == true) entry.note!,
-        ].join(' · '),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
+          FyIconBadge(icon: icon, size: 36, iconSize: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.category?.isNotEmpty == true ? entry.category! : label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(fontSize: 15),
+                ),
+                Text(
+                  [
+                    _date(entry.occurredAt),
+                    if (entry.note?.isNotEmpty == true) entry.note!,
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             MoneyFormatter.format(entry.amountMinor, currency: entry.currency),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontSize: 15,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
           if (canReverse)
             IconButton(
               tooltip: 'Обратная операция',
               onPressed: onReverse,
-              icon: const Icon(Icons.undo),
+              icon: const Icon(Icons.undo_rounded),
             ),
         ],
       ),
     );
   }
+}
+
+String _sessionsWord(int count) {
+  final mod100 = count % 100;
+  final mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return 'занятий';
+  if (mod10 == 1) return 'занятие';
+  if (mod10 >= 2 && mod10 <= 4) return 'занятия';
+  return 'занятий';
 }
 
 String _date(String iso) {

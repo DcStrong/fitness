@@ -7,7 +7,8 @@ import '../../../../core/widgets/fy_card.dart';
 import '../../../../core/widgets/fy_chip.dart';
 import '../../../../core/widgets/fy_icon_badge.dart';
 import '../../../../core/widgets/fy_segmented_control.dart';
-import '../../../../core/widgets/fy_top_bar.dart';
+import '../../../../core/widgets/fy_button.dart';
+import '../../../../core/widgets/fy_square_icon_button.dart';
 import '../../data/plans_format.dart';
 import '../../data/plans_models.dart';
 import '../../data/plans_repository.dart';
@@ -16,6 +17,7 @@ import '../cubit/plans_library_state.dart';
 import '../library_tag_rank.dart';
 import '../widgets/assign_exercises_sheet.dart';
 import '../widgets/pick_student_sheet.dart';
+import '../widgets/plans_header.dart';
 import '../widgets/tag_search_sheet.dart';
 
 class PlansListScreen extends StatelessWidget {
@@ -59,80 +61,77 @@ class PlansLibraryView extends StatelessWidget {
             !visibleOnly && state.mode == PlansLibraryMode.exercises;
         final showBack = context.canPop();
         return Scaffold(
-          appBar: FyTopBar(
-            title: visibleOnly ? 'Доступные' : 'Тренировки',
-            automaticallyImplyLeading: false,
-            leading: showBack
-                ? IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
-                  )
-                : null,
-            actions: [
-              if (!visibleOnly && state.mode == PlansLibraryMode.own)
-                IconButton(
-                  tooltip: state.selecting ? 'Готово' : 'Выбрать',
-                  onPressed: cubit.toggleSelecting,
-                  icon: Icon(state.selecting ? Icons.check : Icons.checklist),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PlansHeader(
+                  title: visibleOnly ? 'Доступные' : 'Тренировки',
+                  showBack: showBack,
+                  actions: [
+                    if (!visibleOnly && state.mode == PlansLibraryMode.own)
+                      FySquareIconButton(
+                        tooltip: state.selecting ? 'Готово' : 'Выбрать',
+                        onPressed: cubit.toggleSelecting,
+                        icon: state.selecting
+                            ? Icons.check_rounded
+                            : Icons.checklist_rounded,
+                      ),
+                    if (!visibleOnly)
+                      FySquareIconButton(
+                        buttonKey: const Key('plans-tags-button'),
+                        tooltip: 'Теги',
+                        onPressed: () => context.push('/tags'),
+                        icon: Icons.sell_outlined,
+                      ),
+                  ],
                 ),
-              if (!visibleOnly)
-                IconButton(
-                  key: const Key('plans-tags-button'),
-                  tooltip: 'Теги',
-                  onPressed: () => context.push('/tags'),
-                  icon: const Icon(Icons.sell_outlined),
+                const SizedBox(height: 4),
+                if (!visibleOnly) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: FySegmentedControl<PlansLibraryMode>(
+                      value: state.mode,
+                      onChanged: cubit.setMode,
+                      segments: const [
+                        FySegment(value: PlansLibraryMode.own, label: 'Мои'),
+                        FySegment(
+                          value: PlansLibraryMode.catalog,
+                          label: 'База',
+                        ),
+                        FySegment(
+                          value: PlansLibraryMode.exercises,
+                          label: 'Упражнения',
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: isExercises
+                            ? 'Поиск упражнения'
+                            : 'Поиск по названию',
+                        prefixIcon: const Icon(Icons.search),
+                      ),
+                      onChanged: cubit.setQuery,
+                    ),
+                  ),
+                  if (state.tags.isNotEmpty)
+                    _CompactTagRow(state: state, cubit: cubit),
+                ],
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: cubit.load,
+                    child: _body(context, state, isCatalog: isCatalog),
+                  ),
                 ),
-              IconButton(
-                onPressed: state.status == PlansLibraryStatus.loading
-                    ? null
-                    : cubit.load,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+              ],
+            ),
           ),
           floatingActionButton: _fab(context, state, isCatalog, isExercises),
-          body: Column(
-            children: [
-              if (!visibleOnly) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: FySegmentedControl<PlansLibraryMode>(
-                    value: state.mode,
-                    onChanged: cubit.setMode,
-                    segments: const [
-                      FySegment(
-                        value: PlansLibraryMode.own,
-                        label: 'Мои',
-                      ),
-                      FySegment(
-                        value: PlansLibraryMode.catalog,
-                        label: 'База',
-                      ),
-                      FySegment(
-                        value: PlansLibraryMode.exercises,
-                        label: 'Упражнения',
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: isExercises
-                          ? 'Поиск упражнения'
-                          : 'Поиск по названию',
-                      prefixIcon: const Icon(Icons.search),
-                    ),
-                    onChanged: cubit.setQuery,
-                  ),
-                ),
-                if (state.tags.isNotEmpty)
-                  _CompactTagRow(state: state, cubit: cubit),
-              ],
-              Expanded(child: _body(context, state, isCatalog: isCatalog)),
-            ],
-          ),
         );
       },
     );
@@ -236,7 +235,8 @@ class PlansLibraryView extends StatelessWidget {
     }
     final cubit = context.read<PlansLibraryCubit>();
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
       itemCount: plans.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -293,7 +293,8 @@ class _StudentVisibleBody extends StatelessWidget {
       return const Center(child: Text('Нет тренировок и упражнений по тегам'));
     }
     return ListView(
-      padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
       children: [
         Text('Тренировки', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -343,7 +344,8 @@ class _ExercisesBody extends StatelessWidget {
       return const Center(child: Text('Нет упражнений'));
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
       itemCount: exercises.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -478,8 +480,8 @@ class _PlanCard extends StatelessWidget {
                 ),
               const FyIconBadge(
                 icon: Icons.fitness_center_rounded,
-                size: 52,
-                iconSize: 26,
+                size: 44,
+                iconSize: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -512,25 +514,25 @@ class _PlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${plan.exercises.length} упражнений',
-            style: const TextStyle(color: AppColors.textMuted),
+            _exercisesCount(plan.exercises.length),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           if (onEdit != null || onClone != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (onEdit != null)
-                  TextButton(
-                    onPressed: onEdit,
-                    child: const Text('Редактировать'),
-                  ),
-                if (onClone != null)
-                  TextButton(
-                    onPressed: cloning ? null : onClone,
-                    child: Text(cloning ? 'Добавление…' : 'Добавить к себе'),
-                  ),
-              ],
-            ),
+            const SizedBox(height: 12),
+            if (onEdit != null)
+              FyButton.soft(
+                label: 'Редактировать',
+                icon: Icons.edit_outlined,
+                size: FyButtonSize.medium,
+                onPressed: onEdit,
+              ),
+            if (onClone != null)
+              FyButton.soft(
+                label: cloning ? 'Добавление…' : 'Добавить к себе',
+                icon: Icons.add_rounded,
+                size: FyButtonSize.medium,
+                onPressed: cloning ? null : onClone,
+              ),
           ],
         ],
       ),
@@ -628,7 +630,7 @@ class _CompactTagRow extends StatelessWidget {
     return SizedBox(
       height: 52,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
         scrollDirection: Axis.horizontal,
         itemCount: visible.length + (showMore ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -667,4 +669,17 @@ class _CompactTagRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _exercisesCount(int count) {
+  final mod100 = count % 100;
+  final mod10 = count % 10;
+  final word = mod100 >= 11 && mod100 <= 14
+      ? 'упражнений'
+      : mod10 == 1
+      ? 'упражнение'
+      : mod10 >= 2 && mod10 <= 4
+      ? 'упражнения'
+      : 'упражнений';
+  return '$count $word';
 }
