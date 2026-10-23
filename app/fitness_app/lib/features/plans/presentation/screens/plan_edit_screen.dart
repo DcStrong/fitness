@@ -9,7 +9,10 @@ import '../../data/plans_repository.dart';
 import '../cubit/plan_editor_cubit.dart';
 import '../cubit/plan_editor_state.dart';
 import '../widgets/plan_loads_table.dart';
-import '../../../../core/widgets/fy_top_bar.dart';
+import '../../../../core/widgets/fy_button.dart';
+import '../../../../core/widgets/fy_card.dart';
+import '../../../../core/widgets/fy_chip.dart';
+import '../widgets/plans_header.dart';
 
 class PlanEditScreen extends StatelessWidget {
   const PlanEditScreen({super.key, this.planId});
@@ -79,150 +82,182 @@ class _PlanEditorViewState extends State<PlanEditorView> {
       builder: (context, state) {
         _syncFromState(state);
         final cubit = context.read<PlanEditorCubit>();
+        final theme = Theme.of(context);
+        final ready =
+            state.status != PlanEditorStatus.loading &&
+            state.status != PlanEditorStatus.initial &&
+            state.status != PlanEditorStatus.failure;
         return Scaffold(
-          appBar: FyTopBar(
-            title: _editorTitle(cubit),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body:
-              state.status == PlanEditorStatus.loading ||
-                  state.status == PlanEditorStatus.initial
-              ? const Center(child: CircularProgressIndicator())
-              : state.status == PlanEditorStatus.failure
-              ? Center(child: Text(state.errorMessage ?? 'Ошибка'))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    TextField(
-                      controller: _title,
-                      decoration: const InputDecoration(
-                        labelText: 'Название *',
-                      ),
-                      onChanged: cubit.setTitle,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Цель',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        for (final goal in const [
-                          ('hypertrophy', 'Набор'),
-                          ('fat_loss', 'Похудение'),
-                          ('general', 'Общее'),
-                        ])
-                          ChoiceChip(
-                            label: Text(goal.$2),
-                            selected: state.goal == goal.$1,
-                            selectedColor: AppColors.mintSoft,
-                            onSelected: (_) => cubit.setGoal(goal.$1),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Теги',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    if (state.tags.isEmpty)
-                      TextButton.icon(
-                        onPressed: () => context.push('/tags'),
-                        icon: const Icon(Icons.sell_outlined),
-                        label: const Text('Создать теги'),
-                      )
-                    else
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: state.tags.map((tag) {
-                          final selected = state.selectedTagIds.contains(
-                            tag.id,
-                          );
-                          return FilterChip(
-                            label: Text('#${tag.name}'),
-                            selected: selected,
-                            onSelected: (_) => cubit.toggleTag(tag.id),
-                          );
-                        }).toList(),
-                      ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _notes,
-                      minLines: 2,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Заметка',
-                        alignLabelWithHint: true,
-                      ),
-                      onChanged: cubit.setNotes,
-                    ),
-                    const SizedBox(height: 16),
-                    PlanLoadsTable(
-                      exercises: state.exercises,
-                      onWeightChanged: cubit.setLoadWeight,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Упражнения',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    if (state.exercises.isEmpty)
-                      const Text('Добавьте упражнение из поиска')
-                    else
-                      ...state.exercises.map(
-                        (exercise) => _ExerciseRow(
-                          exercise: exercise,
-                          onEdit: () => _editSets(context, cubit, exercise),
-                          onRemove: () =>
-                              cubit.removeExercise(exercise.exerciseId),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PlansHeader(title: _editorTitle(cubit)),
+                Expanded(
+                  child: !ready
+                      ? state.status == PlanEditorStatus.failure
+                            ? Center(
+                                child: Text(state.errorMessage ?? 'Ошибка'),
+                              )
+                            : const Center(child: CircularProgressIndicator())
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                          children: [
+                            TextField(
+                              controller: _title,
+                              decoration: const InputDecoration(
+                                labelText: 'Название *',
+                              ),
+                              onChanged: cubit.setTitle,
+                            ),
+                            const SizedBox(height: 20),
+                            Text('Цель', style: theme.textTheme.titleLarge),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final goal in const [
+                                  ('hypertrophy', 'Набор'),
+                                  ('fat_loss', 'Похудение'),
+                                  ('general', 'Общее'),
+                                ])
+                                  FyChip(
+                                    label: goal.$2,
+                                    selected: state.goal == goal.$1,
+                                    outlined: state.goal != goal.$1,
+                                    onSelected: (_) => cubit.setGoal(goal.$1),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Text('Теги', style: theme.textTheme.titleLarge),
+                            const SizedBox(height: 12),
+                            if (state.tags.isEmpty)
+                              FyButton.soft(
+                                label: 'Создать теги',
+                                icon: Icons.sell_outlined,
+                                size: FyButtonSize.medium,
+                                fullWidth: false,
+                                onPressed: () => context.push('/tags'),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final tag in state.tags)
+                                    FyChip(
+                                      label: '#${tag.name}',
+                                      selected: state.selectedTagIds.contains(
+                                        tag.id,
+                                      ),
+                                      outlined: !state.selectedTagIds.contains(
+                                        tag.id,
+                                      ),
+                                      onSelected: (_) =>
+                                          cubit.toggleTag(tag.id),
+                                    ),
+                                ],
+                              ),
+                            const SizedBox(height: 20),
+                            TextField(
+                              controller: _notes,
+                              minLines: 2,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                labelText: 'Заметка',
+                                alignLabelWithHint: true,
+                              ),
+                              onChanged: cubit.setNotes,
+                            ),
+                            const SizedBox(height: 20),
+                            PlanLoadsTable(
+                              exercises: state.exercises,
+                              onWeightChanged: cubit.setLoadWeight,
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Упражнения',
+                              style: theme.textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 12),
+                            if (state.exercises.isEmpty)
+                              FyCard(
+                                child: Text(
+                                  'Добавьте упражнение из поиска',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              )
+                            else
+                              for (final exercise in state.exercises) ...[
+                                _ExerciseRow(
+                                  exercise: exercise,
+                                  onEdit: () =>
+                                      _editSets(context, cubit, exercise),
+                                  onRemove: () =>
+                                      cubit.removeExercise(exercise.exerciseId),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            const SizedBox(height: 8),
+                            TextField(
+                              decoration: const InputDecoration(
+                                hintText: 'Найти или создать упражнение',
+                                prefixIcon: Icon(Icons.search),
+                              ),
+                              onChanged: cubit.setExerciseQuery,
+                            ),
+                            const SizedBox(height: 8),
+                            for (final item in state.filteredExercises.take(8))
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(item.name),
+                                subtitle: Text(item.isCatalog ? 'База' : 'Моё'),
+                                trailing: const Icon(
+                                  Icons.add_rounded,
+                                  color: AppColors.primary,
+                                ),
+                                onTap: () => cubit.addExercise(item),
+                              ),
+                            if (state.exerciseQuery.trim().isNotEmpty)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: FyButton.soft(
+                                  label:
+                                      'Создать «${state.exerciseQuery.trim()}»',
+                                  icon: Icons.add_rounded,
+                                  size: FyButtonSize.medium,
+                                  fullWidth: false,
+                                  onPressed: () =>
+                                      _createExercise(context, cubit),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Найти или создать упражнение',
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onChanged: cubit.setExerciseQuery,
-                    ),
-                    const SizedBox(height: 8),
-                    ...state.filteredExercises.take(8).map((item) {
-                      return ListTile(
-                        dense: true,
-                        title: Text(item.name),
-                        subtitle: Text(item.isCatalog ? 'База' : 'Моё'),
-                        onTap: () => cubit.addExercise(item),
-                      );
-                    }),
-                    if (state.exerciseQuery.trim().isNotEmpty)
-                      TextButton(
-                        onPressed: () => _createExercise(context, cubit),
-                        child: Text('Создать «${state.exerciseQuery.trim()}»'),
-                      ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: state.status == PlanEditorStatus.saving
-                          ? null
-                          : () async {
-                              final ok = await cubit.save();
-                              if (ok && context.mounted) context.pop();
-                            },
-                      child: Text(
-                        state.status == PlanEditorStatus.saving
+                ),
+                if (ready)
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: FyButton.primary(
+                        label: state.status == PlanEditorStatus.saving
                             ? 'Сохранение…'
                             : 'Сохранить',
+                        onPressed: state.status == PlanEditorStatus.saving
+                            ? null
+                            : () async {
+                                final ok = await cubit.save();
+                                if (ok && context.mounted) context.pop();
+                              },
                       ),
                     ),
-                  ],
-                ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -306,10 +341,10 @@ class _PlanEditorViewState extends State<PlanEditorView> {
       builder: (context) {
         return Padding(
           padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            16 + MediaQuery.viewInsetsOf(context).bottom,
+            20,
+            20,
+            20,
+            20 + MediaQuery.viewInsetsOf(context).bottom,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -352,9 +387,9 @@ class _PlanEditorViewState extends State<PlanEditorView> {
                 decoration: const InputDecoration(labelText: 'Отдых, сек'),
               ),
               const SizedBox(height: 16),
-              FilledButton(
+              FyButton.primary(
+                label: 'Готово',
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Готово'),
               ),
             ],
           ),
@@ -386,12 +421,31 @@ class _ExerciseRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(exercise.exerciseName),
-      subtitle: Text(formatPlanExerciseRow(exercise)),
+    final theme = Theme.of(context);
+    return FyCard(
       onTap: onEdit,
-      trailing: IconButton(icon: const Icon(Icons.close), onPressed: onRemove),
+      padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(exercise.exerciseName, style: theme.textTheme.titleMedium),
+                Text(
+                  formatPlanExerciseRow(exercise),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Убрать',
+            icon: const Icon(Icons.close_rounded),
+            onPressed: onRemove,
+          ),
+        ],
+      ),
     );
   }
 }

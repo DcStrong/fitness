@@ -45,6 +45,13 @@ List<List<MoreMenuItem>> trainerMoreSections({required bool canReadFinance}) {
           route: '/finance',
         ),
       const MoreMenuItem(
+        title: 'Пакеты занятий',
+        subtitle: 'Абонементы и цены',
+        icon: Icons.inventory_2_outlined,
+        route: '/session-packages',
+        switchesTab: true,
+      ),
+      const MoreMenuItem(
         title: 'Журнал тренировок',
         subtitle: 'Все занятия и их история',
         icon: Icons.list_alt_rounded,

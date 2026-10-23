@@ -12,7 +12,7 @@ import '../../data/plans_models.dart';
 import '../cubit/tag_hub_cubit.dart';
 import '../cubit/tag_hub_state.dart';
 import '../widgets/tag_attach_sheet.dart';
-import '../../../../core/widgets/fy_top_bar.dart';
+import '../widgets/plans_header.dart';
 
 class TagHubView extends StatelessWidget {
   const TagHubView({super.key});
@@ -40,33 +40,6 @@ class TagHubView extends StatelessWidget {
       builder: (context, state) {
         final title = state.hub == null ? 'Тег' : state.hub!.tag.name;
         return Scaffold(
-          appBar: FyTopBar(
-            title: title,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/tags');
-                }
-              },
-            ),
-            actions: [
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'delete') _delete(context);
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    key: Key('tag-hub-delete'),
-                    value: 'delete',
-                    child: Text('Удалить тег'),
-                  ),
-                ],
-              ),
-            ],
-          ),
           floatingActionButton: state.status == TagHubStatus.success
               ? FloatingActionButton.extended(
                   key: const Key('tag-hub-attach'),
@@ -78,15 +51,48 @@ class TagHubView extends StatelessWidget {
                   label: const Text('Привязать'),
                 )
               : null,
-          body: switch (state.status) {
-            TagHubStatus.initial || TagHubStatus.loading => const Center(
-              child: CircularProgressIndicator(),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PlansHeader(
+                  title: title,
+                  onBack: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/tags');
+                    }
+                  },
+                  actions: [
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'delete') _delete(context);
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          key: Key('tag-hub-delete'),
+                          value: 'delete',
+                          child: Text('Удалить тег'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: switch (state.status) {
+                    TagHubStatus.initial || TagHubStatus.loading =>
+                      const Center(child: CircularProgressIndicator()),
+                    TagHubStatus.failure => Center(
+                      child: Text(state.errorMessage ?? 'Ошибка'),
+                    ),
+                    TagHubStatus.success => _HubBody(state: state),
+                  },
+                ),
+              ],
             ),
-            TagHubStatus.failure => Center(
-              child: Text(state.errorMessage ?? 'Ошибка'),
-            ),
-            TagHubStatus.success => _HubBody(state: state),
-          },
+          ),
         );
       },
     );
@@ -233,7 +239,7 @@ class _HubBody extends StatelessWidget {
         state.section == TagHubSection.all ||
         state.section == TagHubSection.exercises;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
       children: [
         TextField(
           key: const Key('tag-hub-search'),

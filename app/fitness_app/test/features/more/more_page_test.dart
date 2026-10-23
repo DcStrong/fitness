@@ -19,7 +19,12 @@ void main() {
 
     expect(
       items.where((item) => item.switchesTab).map((item) => item.route),
-      unorderedEquals(['/sessions', '/schedule/recurring', '/invite']),
+      unorderedEquals([
+        '/session-packages',
+        '/sessions',
+        '/schedule/recurring',
+        '/invite',
+      ]),
     );
   });
 }
