@@ -18,6 +18,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String _role = 'trainer';
@@ -25,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -38,6 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailController.text,
       password: _passwordController.text,
       role: _role,
+      displayName: _nameController.text,
     );
   }
 
@@ -73,6 +76,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 28),
+                        FyInputCard(
+                          key: const Key('register_name_field'),
+                          label: 'Имя',
+                          icon: Icons.person_outline_rounded,
+                          controller: _nameController,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.name],
+                          variant: FyInputCardVariant.outlined,
+                          validator: (value) {
+                            final name = value?.trim() ?? '';
+                            if (name.length < 2) {
+                              return 'Введите имя (минимум 2 символа)';
+                            }
+                            if (name.length > 80) {
+                              return 'Не более 80 символов';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
                         FyInputCard(
                           label: 'Email',
                           icon: Icons.email_outlined,

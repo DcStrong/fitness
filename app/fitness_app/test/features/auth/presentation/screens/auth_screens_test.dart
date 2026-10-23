@@ -85,6 +85,7 @@ void main() {
         email: any(named: 'email'),
         password: any(named: 'password'),
         role: any(named: 'role'),
+        displayName: any(named: 'displayName'),
       ),
     ).thenAnswer((_) async => session);
 
@@ -95,8 +96,9 @@ void main() {
 
     await tester.pumpWidget(buildSubject(const RegisterScreen()));
 
-    await tester.enterText(find.byType(TextField).at(0), 'student@example.com');
-    await tester.enterText(find.byType(TextField).at(1), 'password123');
+    await tester.enterText(find.byType(TextField).at(0), '  Иван Петров ');
+    await tester.enterText(find.byType(TextField).at(1), 'student@example.com');
+    await tester.enterText(find.byType(TextField).at(2), 'password123');
     await tester.ensureVisible(find.text('Ученик'));
     await tester.tap(find.text('Ученик'));
     await tester.ensureVisible(find.text('Зарегистрироваться'));
@@ -108,6 +110,7 @@ void main() {
         email: 'student@example.com',
         password: 'password123',
         role: 'student',
+        displayName: 'Иван Петров',
       ),
     ).called(1);
     expect(tester.takeException(), isNull);

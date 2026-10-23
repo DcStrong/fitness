@@ -83,7 +83,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = widget.user;
-    final name = _displayName?.trim();
+    final name = (_displayName ?? user.displayName)?.trim();
     final hasName = name != null && name.isNotEmpty;
 
     final shortcuts = <MoreMenuItem>[

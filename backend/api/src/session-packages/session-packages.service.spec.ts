@@ -74,6 +74,11 @@ describe('SessionPackagesService', () => {
       dataSource as never,
       packages as never,
       links as never,
+      {
+        findByUserIds: jest.fn(async () => [
+          { userId: 'coach-1', displayName: 'Анна Тренер' },
+        ]),
+      } as never,
     );
     return { service, packages, links, dataSource };
   }
@@ -93,6 +98,8 @@ describe('SessionPackagesService', () => {
 
     expect(result.remainingSessions).toBe(8);
     expect(result.status).toBe('active');
+    expect(result.coachDisplayName).toBe('Анна Тренер');
+    expect(result.studentDisplayName).toBeNull();
     expect(packages.save).toHaveBeenCalled();
   });
 

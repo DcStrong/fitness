@@ -12,6 +12,7 @@ export interface AuthTokens {
 export interface AuthProfile {
   id: string;
   email: string;
+  displayName: string | null;
   roles: string[];
   permissions: string[];
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radii.dart';
+import '../../../core/widgets/person_name_email.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
@@ -111,14 +112,21 @@ class MorePage extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  FyAvatar(email: user?.email, size: 52),
+                  FyAvatar(
+                    displayName: user?.displayName,
+                    email: user?.email,
+                    size: 52,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.email ?? '—',
+                          personPrimaryLabel(
+                            displayName: user?.displayName,
+                            email: user?.email,
+                          ),
                           style: theme.textTheme.titleMedium,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

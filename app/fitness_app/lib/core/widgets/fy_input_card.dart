@@ -14,6 +14,7 @@ class FyInputCard extends StatelessWidget {
     this.controller,
     this.focusNode,
     this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
     this.textInputAction,
     this.validator,
     this.onChanged,
@@ -34,6 +35,7 @@ class FyInputCard extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
   final TextInputAction? textInputAction;
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onChanged;
@@ -122,6 +124,7 @@ class FyInputCard extends StatelessWidget {
                         controller: controller,
                         focusNode: focusNode,
                         keyboardType: keyboardType,
+                        textCapitalization: textCapitalization,
                         textInputAction: textInputAction,
                         onChanged: (value) {
                           field.didChange(value);

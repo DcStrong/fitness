@@ -19,10 +19,16 @@ class AuthRepository {
     required String email,
     required String password,
     required String role,
+    required String displayName,
   }) async {
     final session = await _postAuth(
       '/auth/register',
-      data: {'email': email, 'password': password, 'role': role},
+      data: {
+        'email': email,
+        'password': password,
+        'role': role,
+        'displayName': displayName,
+      },
     );
     await _persist(session);
     return session;
