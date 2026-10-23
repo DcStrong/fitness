@@ -10,6 +10,7 @@ import '../../features/auth/presentation/cubit/auth_state.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/chats/presentation/chat_thread_page.dart';
 import '../../features/chats/presentation/chats_page.dart';
 import '../../features/finance/presentation/finance_page.dart';
 import '../../features/home/presentation/home_page.dart';
@@ -386,6 +387,18 @@ GoRouter createAppRouter(
                       isTrainer:
                           authCubit.state.user?.roles.contains('trainer') ==
                           true,
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/chats/with/:userId',
+                    builder: (context, state) => ChatThreadPage(
+                      counterpartId: state.pathParameters['userId'],
+                    ),
+                  ),
+                  GoRoute(
+                    path: '/chats/:id',
+                    builder: (context, state) => ChatThreadPage(
+                      conversationId: state.pathParameters['id'],
                     ),
                   ),
                 ],

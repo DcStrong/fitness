@@ -73,6 +73,16 @@ class StudentHubView extends StatelessWidget {
                 }
               },
             ),
+            actions: [
+              if (cubit.isTrainer)
+                IconButton(
+                  key: const Key('hub-action-chat'),
+                  tooltip: 'Написать',
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
+                  onPressed: () =>
+                      context.push('/chats/with/${cubit.studentId}'),
+                ),
+            ],
           ),
           body: switch (state.status) {
             StudentHubStatus.initial || StudentHubStatus.loading =>

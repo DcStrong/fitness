@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +17,10 @@ import '../features/session_packages/data/session_packages_repository.dart';
 import '../features/student_hub/data/progress_repository.dart';
 import '../features/social/data/social_repository.dart';
 import '../features/booking_requests/data/booking_requests_repository.dart';
+import '../features/auth/presentation/cubit/auth_state.dart';
+import '../features/chats/data/chat_realtime.dart';
+import '../features/chats/data/chats_repository.dart';
+import '../features/chats/presentation/cubit/chat_unread_cubit.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -37,6 +43,10 @@ class _FitnessAppState extends State<FitnessApp> {
   late final BookingRequestsRepository _bookingRequestsRepository;
   late final SessionPackagesRepository _sessionPackagesRepository;
   late final ProgressRepository _progressRepository;
+  late final ChatsRepository _chatsRepository;
+  late final ChatRealtime _chatRealtime;
+  late final ChatUnreadCubit _chatUnreadCubit;
+  StreamSubscription<AuthState>? _authSub;
   late final ScheduleCalendarSync _scheduleCalendarSync;
   late final ValueNotifier<ThemeMode> _themeMode;
   late final GoRouter _router;
@@ -66,6 +76,15 @@ class _FitnessAppState extends State<FitnessApp> {
       apiClient: apiClient,
     );
     _progressRepository = ProgressRepository(apiClient: apiClient);
+    _chatsRepository = ChatsRepository(apiClient: apiClient);
+    _chatRealtime = SocketChatRealtime(
+      tokenStorage: _tokenStorage,
+      refreshSession: _chatsRepository.unreadCount,
+    );
+    _chatUnreadCubit = ChatUnreadCubit(
+      repository: _chatsRepository,
+      realtime: _chatRealtime,
+    );
     _scheduleCalendarSync = ScheduleCalendarSync();
     authCubit = AuthCubit(authRepository: _authRepository);
     _authCubit = authCubit;
@@ -75,11 +94,24 @@ class _FitnessAppState extends State<FitnessApp> {
       _invitationsRepository,
       themeMode: _themeMode,
     );
+    // The chat socket lives exactly as long as the signed-in session.
+    _authSub = _authCubit.stream.listen(_syncChat);
+    _syncChat(_authCubit.state);
     _authCubit.bootstrap();
+  }
+
+  void _syncChat(AuthState state) {
+    if (state.status == AuthStatus.authenticated) {
+      _chatUnreadCubit.start();
+    } else {
+      unawaited(_chatUnreadCubit.stop());
+    }
   }
 
   @override
   void dispose() {
+    _authSub?.cancel();
+    _chatUnreadCubit.close();
     _authCubit.close();
     _router.dispose();
     _themeMode.dispose();
@@ -101,9 +133,14 @@ class _FitnessAppState extends State<FitnessApp> {
         RepositoryProvider.value(value: _sessionPackagesRepository),
         RepositoryProvider.value(value: _progressRepository),
         RepositoryProvider.value(value: _scheduleCalendarSync),
+        RepositoryProvider.value(value: _chatsRepository),
+        RepositoryProvider<ChatRealtime>.value(value: _chatRealtime),
       ],
-      child: BlocProvider.value(
-        value: _authCubit,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: _authCubit),
+          BlocProvider.value(value: _chatUnreadCubit),
+        ],
         child: ValueListenableBuilder<ThemeMode>(
           valueListenable: _themeMode,
           builder: (context, themeMode, _) => MaterialApp.router(

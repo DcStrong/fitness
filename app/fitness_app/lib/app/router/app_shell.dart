@@ -6,6 +6,7 @@ import '../../core/widgets/fy_card.dart';
 import '../../core/widgets/fy_motion.dart';
 import '../../features/auth/presentation/cubit/auth_cubit.dart';
 import '../../features/auth/presentation/cubit/auth_state.dart';
+import '../../features/chats/presentation/cubit/chat_unread_cubit.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 
@@ -52,8 +53,16 @@ class AppShell extends StatelessWidget {
                   destinations: [
                     for (final destination in destinations)
                       NavigationDestination(
-                        icon: Icon(destination.icon),
-                        selectedIcon: Icon(destination.selectedIcon),
+                        icon: _DestinationIcon(
+                          icon: destination.icon,
+                          isChat:
+                              destination.branchIndex == AppShellBranch.chats,
+                        ),
+                        selectedIcon: _DestinationIcon(
+                          icon: destination.selectedIcon,
+                          isChat:
+                              destination.branchIndex == AppShellBranch.chats,
+                        ),
                         label: destination.label,
                       ),
                   ],
@@ -77,6 +86,27 @@ class AppShell extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Tab icon; the chat tab carries the unread counter.
+class _DestinationIcon extends StatelessWidget {
+  const _DestinationIcon({required this.icon, required this.isChat});
+
+  final IconData icon;
+  final bool isChat;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isChat) return Icon(icon);
+    final unread = context.watch<ChatUnreadCubit>().state;
+    return Badge(
+      key: const Key('chat-tab-badge'),
+      isLabelVisible: unread > 0,
+      backgroundColor: AppColors.primary,
+      label: Text(unread > 99 ? '99+' : '$unread'),
+      child: Icon(icon),
     );
   }
 }

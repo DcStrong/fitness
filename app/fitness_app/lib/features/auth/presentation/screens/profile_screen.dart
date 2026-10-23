@@ -197,7 +197,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
                     backgroundColor: AppColors.primarySoft,
                     foregroundColor: AppColors.primary,
                   ),
-                  onPressed: () => context.go('/chats'),
+                  // One coach: the «Чат» tab is that thread; several: open
+                  // this coach's thread directly.
+                  onPressed: () => _coaches.length == 1
+                      ? context.go('/chats')
+                      : context.push('/chats/with/${coach.coachId}'),
                   child: const Text('Написать'),
                 ),
               ],
