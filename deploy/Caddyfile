@@ -1,7 +1,18 @@
 # Домены берутся из .env (APP_HOST / API_HOST). Сертификаты Caddy получает сам.
 {$APP_HOST} {
 	root * /srv
-	encode gzip
+
+	# Сжатие: zstd/gzip для js, wasm, json, шрифтов (ttf/otf не сжимаются по умолчанию).
+	encode zstd gzip
+
+	# Файлы без хеша в имени — всегда проверять свежесть (ETag), чтобы после деплоя не остаться на старой версии.
+	@shell path / /index.html /flutter_bootstrap.js /flutter_service_worker.js /version.json /manifest.json /main.dart.js /main.dart.wasm /main.dart.mjs
+	header @shell Cache-Control "no-cache"
+
+	# Тяжёлое и редко меняющееся (canvaskit.wasm, шрифты, ассеты; main.dart.js без хеша, поэтому он выше): кеш на неделю + ETag.
+	@heavy path /canvaskit/* /assets/* /icons/*
+	header @heavy Cache-Control "public, max-age=604800"
+
 	try_files {path} /index.html
 	file_server
 }

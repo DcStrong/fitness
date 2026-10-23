@@ -42,3 +42,7 @@
 - **Бэкап:** `docker compose -f docker-compose.deploy.yml exec -T postgres pg_dump -U postgres fitness_yoda > backup.sql`
 - **Восстановить из бэкапа** (в запущенный стенд): `docker compose -f docker-compose.deploy.yml exec -T postgres psql -U postgres fitness_yoda < backup.sql` (лучше сначала сбросить базу, как ниже, иначе будут ошибки «уже существует»).
 - **Сбросить базу с нуля:** `docker compose -f docker-compose.deploy.yml down -v && docker compose -f docker-compose.deploy.yml up -d --build`. Миграции и начальные данные применятся заново. Заодно сотрутся и сертификаты Caddy (`caddy_data`), они выдадутся снова.
+
+## Производительность Flutter web
+
+Flutter web рисует всё на canvas (CanvasKit) и не равен нативному приложению: на слабых телефонах и в Safari будет заметно медленнее, ввод текста идёт через скрытый `<input>`. Для настоящей оценки плавности собирайте APK/iOS. Что уже сделано на стенде: release-сборка, CanvasKit раздаётся с нашего сервера (`--no-web-resources-cdn`), Caddy сжимает zstd/gzip и кеширует тяжёлые ассеты, картинки карточек главной уменьшены до 640 px (webp).

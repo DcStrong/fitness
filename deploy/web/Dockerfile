@@ -4,7 +4,8 @@ ARG API_BASE_URL
 WORKDIR /src
 COPY app/fitness_app/ ./
 RUN flutter pub get
-RUN flutter build web --release --dart-define=API_BASE_URL=${API_BASE_URL}
+# --no-web-resources-cdn: CanvasKit (wasm, ~2 МБ по сети со сжатием) отдаётся нашим Caddy, а не с gstatic.com (медленно/нестабильно в РФ).
+RUN flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=${API_BASE_URL}
 
 FROM caddy:2
 COPY --from=build /src/build/web /srv

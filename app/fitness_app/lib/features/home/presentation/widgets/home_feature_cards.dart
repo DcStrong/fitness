@@ -30,28 +30,28 @@ List<HomeFeatureCardData> homeFeatureCards({
         description: 'Свободные слоты и запись учеников',
         icon: Icons.calendar_month_outlined,
         route: '/schedule',
-        backgroundAsset: 'assets/images/home/home_feature_schedule.png',
+        backgroundAsset: 'assets/images/home/home_feature_schedule.webp',
       ),
       const HomeFeatureCardData(
         title: 'Регулярные тренировки',
         description: 'Серии занятий по дням недели',
         icon: Icons.event_repeat_outlined,
         route: '/schedule/recurring',
-        backgroundAsset: 'assets/images/home/home_feature_recurring.png',
+        backgroundAsset: 'assets/images/home/home_feature_recurring.webp',
       ),
       const HomeFeatureCardData(
         title: 'Ученики',
         description: 'Абонементы и связи',
         icon: Icons.groups_outlined,
         route: '/session-packages',
-        backgroundAsset: 'assets/images/home/home_feature_students.png',
+        backgroundAsset: 'assets/images/home/home_feature_students.webp',
       ),
       const HomeFeatureCardData(
         title: 'Планирование',
         description: 'Программы и планы тренировок',
         icon: Icons.assignment_outlined,
         route: '/plans',
-        backgroundAsset: 'assets/images/home/home_feature_plans.png',
+        backgroundAsset: 'assets/images/home/home_feature_plans.webp',
       ),
       if (canReadFinance)
         const HomeFeatureCardData(
@@ -59,7 +59,7 @@ List<HomeFeatureCardData> homeFeatureCards({
           description: 'Доходы, оплаты и операции',
           icon: Icons.account_balance_wallet_outlined,
           route: '/finance',
-          backgroundAsset: 'assets/images/home/home_feature_finance.png',
+          backgroundAsset: 'assets/images/home/home_feature_finance.webp',
         ),
     ];
   }
@@ -70,35 +70,35 @@ List<HomeFeatureCardData> homeFeatureCards({
       description: 'Предстоящие занятия и назначенные программы',
       icon: Icons.self_improvement_outlined,
       route: '/me/training',
-      backgroundAsset: 'assets/images/home/home_feature_recurring.png',
+      backgroundAsset: 'assets/images/home/home_feature_recurring.webp',
     ),
     HomeFeatureCardData(
       title: 'Записаться',
       description: 'Выбрать свободное время тренера',
       icon: Icons.event_available_outlined,
       route: '/schedule/book',
-      backgroundAsset: 'assets/images/home/home_feature_schedule.png',
+      backgroundAsset: 'assets/images/home/home_feature_schedule.webp',
     ),
     HomeFeatureCardData(
       title: 'Мои заявки',
       description: 'Статусы запросов на тренировку',
       icon: Icons.event_note_outlined,
       route: '/booking-requests/mine',
-      backgroundAsset: 'assets/images/home/home_feature_plans.png',
+      backgroundAsset: 'assets/images/home/home_feature_plans.webp',
     ),
     HomeFeatureCardData(
       title: 'Тренеры',
       description: 'Найти тренера для занятий',
       icon: Icons.person_search_outlined,
       route: '/trainers',
-      backgroundAsset: 'assets/images/home/home_feature_students.png',
+      backgroundAsset: 'assets/images/home/home_feature_students.webp',
     ),
     HomeFeatureCardData(
       title: 'Планы',
       description: 'Назначенные тренировки и прогресс',
       icon: Icons.assignment_outlined,
       route: '/me/training',
-      backgroundAsset: 'assets/images/home/home_feature_plans.png',
+      backgroundAsset: 'assets/images/home/home_feature_plans.webp',
     ),
   ];
 }
@@ -164,14 +164,16 @@ class _HomeFeatureCard extends StatelessWidget {
             children: [
               if (card.backgroundAsset != null)
                 Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.52,
-                    child: Image.asset(
-                      card.backgroundAsset!,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.centerRight,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                    ),
+                  // opacity на самом Image — без saveLayer (Opacity-виджет
+                  // заставляет Flutter web перерисовывать слой на каждый кадр).
+                  child: Image.asset(
+                    card.backgroundAsset!,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerRight,
+                    opacity: const AlwaysStoppedAnimation(0.52),
+                    cacheWidth: 640,
+                    excludeFromSemantics: true,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
               const Positioned.fill(
