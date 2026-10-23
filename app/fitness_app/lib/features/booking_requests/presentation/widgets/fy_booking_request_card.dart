@@ -126,22 +126,23 @@ class FyBookingRequestCard extends StatelessWidget {
           ),
           if (request.isPending) ...[
             const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  backgroundColor: AppColors.primarySoft,
+                  foregroundColor: AppColors.primary,
+                ),
+                onPressed: processing ? null : onAccept,
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Принять'),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      backgroundColor: AppColors.primarySoft,
-                      foregroundColor: AppColors.primary,
-                    ),
-                    onPressed: processing ? null : onAccept,
-                    icon: const Icon(Icons.check_rounded),
-                    label: const Text('Принять'),
-                  ),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
@@ -155,15 +156,19 @@ class FyBookingRequestCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      foregroundColor: AppColors.error,
+                    ),
+                    onPressed: processing ? null : onReject,
+                    child: const Text('Отклонить'),
+                  ),
+                ),
               ],
-            ),
-            Align(
-              alignment: Alignment.center,
-              child: TextButton(
-                style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                onPressed: processing ? null : onReject,
-                child: const Text('Отклонить'),
-              ),
             ),
           ],
         ],
