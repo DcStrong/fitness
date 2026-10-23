@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { DataSource, type EntityManager } from 'typeorm';
 import { ScheduleSlotEntity } from '../database/entity/schedule-slot.entity';
@@ -16,20 +17,26 @@ import { CoachStudentLinkRepository } from '../database/repository/coach-student
 import type { BookAtTimeParams } from './interface/book-at-time.params';
 import type { BookSlotParams } from './interface/book-slot.params';
 import { OCCUPIED_SLOT_STATUSES } from './util/occupied-slot-statuses.util';
+import {
+  type ChatDelivery,
+  ChatSystemMessageService,
+} from '../chat/chat-system-message.service';
 
 @Injectable()
 export class CalendarBookingService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly links: CoachStudentLinkRepository,
+    @Optional() private readonly chat?: ChatSystemMessageService,
   ) {}
 
   /**
    * Book an existing open ScheduleSlot for a linked student.
    */
   async book(input: BookSlotParams): Promise<SessionEntity> {
+    const deliveries: ChatDelivery[] = [];
     // eslint-disable-next-line complexity -- atomic booking checks belong together.
-    return this.dataSource.transaction(async manager => {
+    const session = await this.dataSource.transaction(async manager => {
       const initialSlot = await manager.findOne(ScheduleSlotEntity, {
         where: { id: input.scheduleSlotId },
       });
@@ -62,8 +69,18 @@ export class CalendarBookingService {
       }
       await this.assertNotHeld(manager, slot.id);
 
-      return this.createSessionChargeAndBookSlot(manager, slot, input);
+      const booked = await this.createSessionChargeAndBookSlot(
+        manager,
+        slot,
+        input,
+      );
+      await this.postBooked(manager, booked, input.notifyChat, deliveries);
+
+      return booked;
     });
+    this.chat?.publish(deliveries);
+
+    return session;
   }
 
   /**
@@ -80,7 +97,8 @@ export class CalendarBookingService {
       throw new ForbiddenException('Coach can only book on own calendar');
     }
 
-    return this.dataSource.transaction(async manager => {
+    const deliveries: ChatDelivery[] = [];
+    const session = await this.dataSource.transaction(async manager => {
       await manager.findOneOrFail(UserEntity, {
         where: { id: input.coachId },
         lock: { mode: 'pessimistic_write' },
@@ -116,7 +134,7 @@ export class CalendarBookingService {
             throw new ConflictException('Slot mode does not match');
           }
           await this.assertNotHeld(manager, exact.id);
-          return this.createSessionChargeAndBookSlot(manager, exact, {
+          const booked = await this.createSessionChargeAndBookSlot(manager, exact, {
             scheduleSlotId: exact.id,
             studentId: input.studentId,
             actorId: input.actorId,
@@ -131,6 +149,9 @@ export class CalendarBookingService {
               ? { recurringLocalDate: input.recurringLocalDate }
               : {},
           });
+          await this.postBooked(manager, booked, input.notifyChat, deliveries);
+
+          return booked;
         }
         throw new ConflictException(
           'Interval overlaps an existing open, booked, or blocked slot',
@@ -162,7 +183,7 @@ export class CalendarBookingService {
         }),
       );
 
-      return this.createSessionChargeAndBookSlot(manager, slot, {
+      const booked = await this.createSessionChargeAndBookSlot(manager, slot, {
         scheduleSlotId: slot.id,
         studentId: input.studentId,
         actorId: input.actorId,
@@ -175,7 +196,40 @@ export class CalendarBookingService {
           ? { recurringLocalDate: input.recurringLocalDate }
           : {},
       });
+      await this.postBooked(manager, booked, input.notifyChat, deliveries);
+
+      return booked;
     });
+    this.chat?.publish(deliveries);
+
+    return session;
+  }
+
+  /**
+   *
+   */
+  private async postBooked(
+    manager: EntityManager,
+    session: SessionEntity,
+    notifyChat: boolean | undefined,
+    deliveries: ChatDelivery[],
+  ): Promise<void> {
+    if (notifyChat !== true || !this.chat) {
+      return;
+    }
+    deliveries.push(
+      await this.chat.post({
+        manager,
+        coachId: session.coachId,
+        studentId: session.studentId,
+        type: 'session_booked',
+        payload: {
+          sessionId: session.id,
+          startsAt: session.startsAt.toISOString(),
+          endsAt: session.endsAt.toISOString(),
+        },
+      }),
+    );
   }
 
   private async assertLinked(coachId: string, studentId: string): Promise<void> {

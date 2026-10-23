@@ -11,4 +11,6 @@ export interface BookSlotParams {
   priceMinor?: string;
   recurringBookingId?: string;
   recurringLocalDate?: string;
+  /** Post a `session_booked` chat message (coach booking a student directly). */
+  notifyChat?: boolean;
 }

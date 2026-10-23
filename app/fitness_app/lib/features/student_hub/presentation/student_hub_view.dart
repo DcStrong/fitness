@@ -507,6 +507,13 @@ class _ActionRow extends StatelessWidget {
             onPressed: () => _assign(context, studentId, onAssigned),
           ),
         ),
+        const SizedBox(width: 8),
+        FySquareIconButton(
+          buttonKey: const Key('hub-action-chat'),
+          tooltip: 'Написать',
+          icon: Icons.chat_bubble_outline_rounded,
+          onPressed: () => context.push('/chats/with/$studentId'),
+        ),
       ],
     );
   }

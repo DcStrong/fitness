@@ -31,6 +31,8 @@ import { WorkoutProgramEntity } from './workout-program.entity';
 import { WorkoutProgramDayEntity } from './workout-program-day.entity';
 import { WorkoutProgramDayItemEntity } from './workout-program-day-item.entity';
 import { WorkoutProgressionRuleEntity } from './workout-progression-rule.entity';
+import { ChatConversationEntity } from './chat-conversation.entity';
+import { ChatMessageEntity } from './chat-message.entity';
 import { SessionReviewEntity } from './session-review.entity';
 import { TagEntity } from './tag.entity';
 import { TrainerPortfolioItemEntity } from './trainer-portfolio-item.entity';
@@ -82,6 +84,8 @@ export const entities = [
   WorkoutProgramDayEntity,
   WorkoutProgramDayItemEntity,
   WorkoutProgressionRuleEntity,
+  ChatConversationEntity,
+  ChatMessageEntity,
 ];
 
 export {
@@ -126,4 +130,6 @@ export {
   WorkoutProgramDayEntity,
   WorkoutProgramDayItemEntity,
   WorkoutProgressionRuleEntity,
+  ChatConversationEntity,
+  ChatMessageEntity,
 };

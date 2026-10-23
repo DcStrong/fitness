@@ -249,6 +249,7 @@ export class SessionsService {
             studentId,
             actorId: actor.id,
             createdBy: 'coach',
+            notifyChat: true,
             ...params.priceMinor !== undefined
               ? { priceMinor: params.priceMinor }
               : {},
@@ -261,6 +262,7 @@ export class SessionsService {
             startsAt: new Date(params.startsAt!),
             endsAt: new Date(params.endsAt!),
             mode: params.mode ?? 'offline',
+            notifyChat: true,
             ...params.priceMinor !== undefined
               ? { priceMinor: params.priceMinor }
               : {},

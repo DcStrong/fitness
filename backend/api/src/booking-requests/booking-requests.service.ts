@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource, QueryFailedError } from 'typeorm';
@@ -17,6 +18,11 @@ import { SessionEntity } from '../database/entity/session.entity';
 import { UserEntity } from '../database/entity/user.entity';
 import { BookingRequestRepository } from '../database/repository/booking-request.repository';
 import { UserProfileRepository } from '../database/repository/user-profile.repository';
+import {
+  type ChatDelivery,
+  ChatSystemMessageService,
+} from '../chat/chat-system-message.service';
+import type { ChatSystemPayload, ChatSystemType } from '../chat/interface';
 import {
   assertPendingBookingRequest,
   BOOKING_REQUEST_REJECTION_COMMENT_MAX_LENGTH,
@@ -40,6 +46,7 @@ export class BookingRequestsService {
     private readonly dataSource: DataSource,
     private readonly requests: BookingRequestRepository,
     private readonly profiles: UserProfileRepository,
+    @Optional() private readonly chat?: ChatSystemMessageService,
   ) {}
 
   /**
@@ -187,6 +194,7 @@ throw new NotFoundException('Slot not found');
    */
   async accept(requestId: string, coachId: string): Promise<BookingRequestModel> {
     await this.expireDue(new Date());
+    const deliveries: ChatDelivery[] = [];
     const id = await this.dataSource.transaction(async manager => {
       const request = await this.lockPendingRequest(manager, requestId);
       if (request.coachId !== coachId) {
@@ -215,9 +223,16 @@ throw new NotFoundException('Slot not found');
         resolution: 'requested_slot',
         sessionId: session.id,
       });
+      await this.postChat(manager, request, 'request_accepted', {
+        bookingRequestId: request.id,
+        sessionId: session.id,
+        startsAt: session.startsAt.toISOString(),
+        endsAt: session.endsAt.toISOString(),
+      }, deliveries);
 
       return request.id;
     });
+    this.chat?.publish(deliveries);
 
     return this.getMapped(id, coachId);
   }
@@ -233,6 +248,7 @@ throw new NotFoundException('Slot not found');
     if (Number.isNaN(startsAt.getTime()) || startsAt <= new Date()) {
       throw new BadRequestException('Alternate start must be a future datetime');
     }
+    const deliveries: ChatDelivery[] = [];
     const id = await this.dataSource.transaction(async manager => {
       const request = await this.lockPendingRequest(manager, params.requestId);
       if (request.coachId !== params.coachId) {
@@ -299,9 +315,17 @@ throw new NotFoundException('Slot not found');
         resolution: 'alternate_slot',
         sessionId: session.id,
       });
+      await this.postChat(manager, request, 'request_alternate', {
+        bookingRequestId: request.id,
+        sessionId: session.id,
+        startsAt: session.startsAt.toISOString(),
+        endsAt: session.endsAt.toISOString(),
+        previousStartsAt: original.startsAt.toISOString(),
+      }, deliveries);
 
       return request.id;
     });
+    this.chat?.publish(deliveries);
 
     return this.getMapped(id, params.coachId);
   }
@@ -339,6 +363,7 @@ throw new NotFoundException('Slot not found');
     reason: RejectBookingRequestParams['reason'] | null = null,
     comment: string | null = null,
   ): Promise<BookingRequestModel> {
+    const deliveries: ChatDelivery[] = [];
     const id = await this.dataSource.transaction(async manager => {
       const request = await this.lockPendingRequest(manager, requestId);
       const studentOwnershipMismatch =
@@ -359,11 +384,51 @@ throw new NotFoundException('Slot not found');
         ...reason ? { reason } : {},
         ...comment ? { comment } : {},
       });
+      // Only linked pairs have a chat; a first-time requester gets no thread.
+      const linked = await manager.exists(CoachStudentLinkEntity, {
+        where: { coachId: request.coachId, studentId: request.studentId },
+      });
+      if (status === 'rejected' && linked) {
+        const slot = await manager.findOne(ScheduleSlotEntity, {
+          where: { id: request.scheduleSlotId },
+        });
+        await this.postChat(manager, request, 'request_rejected', {
+          bookingRequestId: request.id,
+          startsAt: slot?.startsAt.toISOString() ?? null,
+          endsAt: slot?.endsAt.toISOString() ?? null,
+          note: comment,
+        }, deliveries);
+      }
 
       return request.id;
     });
+    this.chat?.publish(deliveries);
 
     return this.getMapped(id, actorId);
+  }
+
+  /**
+   *
+   */
+  private async postChat(
+    manager: import('typeorm').EntityManager,
+    request: BookingRequestEntity,
+    type: ChatSystemType,
+    payload: ChatSystemPayload,
+    deliveries: ChatDelivery[],
+  ): Promise<void> {
+    if (!this.chat) {
+      return;
+    }
+    deliveries.push(
+      await this.chat.post({
+        manager,
+        coachId: request.coachId,
+        studentId: request.studentId,
+        type,
+        payload,
+      }),
+    );
   }
 
   /**
