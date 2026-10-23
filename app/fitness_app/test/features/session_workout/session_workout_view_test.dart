@@ -103,7 +103,9 @@ void main() {
     );
   });
 
-  testWidgets('одна primary Проведена и ⋯ для неявки', (tester) async {
+  testWidgets('одна filled-кнопка, неявка рядом, отмена и история в шапке', (
+    tester,
+  ) async {
     final cubit = _MockCubit();
     final session = twoWorkouts();
     whenListen(
@@ -136,25 +138,18 @@ void main() {
     );
 
     expect(find.byKey(const Key('session-complete')), findsOneWidget);
-    expect(find.text('Проведена'), findsOneWidget);
-    expect(find.byType(OutlinedButton), findsNothing);
-    await tester.tap(find.byIcon(Icons.more_vert));
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('session-no-show'), skipOffstage: false),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('session-cancel'), skipOffstage: false),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('session-history'), skipOffstage: false),
-      findsOneWidget,
-    );
+    expect(find.text('Отметить проведённым'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.byKey(const Key('session-no-show')), findsOneWidget);
+    expect(find.byType(OutlinedButton), findsOneWidget);
+    expect(find.byKey(const Key('session-cancel')), findsOneWidget);
+    expect(find.byKey(const Key('session-history')), findsOneWidget);
+    expect(find.byIcon(Icons.more_vert), findsNothing);
+    expect(find.text('Записан'), findsOneWidget);
+    expect(find.text('Иван'), findsOneWidget);
   });
 
-  testWidgets('пустое занятие: Выбрать тренировку, без ссылки Проведена', (
+  testWidgets('пустое занятие: Выбрать тренировку, «Без тренировки» вторично', (
     tester,
   ) async {
     final cubit = _MockCubit();
@@ -199,11 +194,15 @@ void main() {
     );
 
     expect(find.byKey(const Key('session-choose-workout')), findsOneWidget);
-    expect(find.text('Проведена'), findsNothing);
-    expect(find.byKey(const Key('session-complete')), findsNothing);
+    expect(find.text('Отметить проведённым'), findsNothing);
+    expect(find.byType(FilledButton), findsOneWidget);
     expect(find.text('Упражнения из списка'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.more_vert));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('session-complete')), findsOneWidget);
+    expect(find.byKey(const Key('session-no-workout')), findsOneWidget);
+    final complete = find.byKey(const Key('session-complete'));
+    expect(complete, findsOneWidget);
+    expect(
+      find.descendant(of: complete, matching: find.text('Без тренировки')),
+      findsOneWidget,
+    );
   });
 }

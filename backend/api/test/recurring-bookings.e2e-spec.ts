@@ -334,16 +334,16 @@ describe('Повторяющаяся запись (e2e)', () => {
       .get('/recurring-bookings')
       .set('Authorization', `Bearer ${coachToken}`)
       .expect(200);
-    const row = (listed.body as Array<{ id: string }>).find(b => b.id === firstId);
+    const row = (
+      listed.body as Array<{ id: string; nextOccurrenceLocalDate: string | null }>
+    ).find(b => b.id === firstId);
     expect(row).toMatchObject({
       id: firstId,
       studentEmail: expect.stringContaining('@'),
     });
     expect(row).toHaveProperty('studentDisplayName');
     expect(row).toHaveProperty('nextOccurrenceLocalDate');
-    expect(
-      (row as { nextOccurrenceLocalDate: string | null }).nextOccurrenceLocalDate,
-    ).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(row?.nextOccurrenceLocalDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     const duplicate = await request(app.getHttpServer())
       .post('/recurring-bookings')

@@ -10,11 +10,13 @@ import '../../features/auth/presentation/cubit/auth_state.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/chats/presentation/chats_page.dart';
 import '../../features/finance/presentation/finance_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/invitations/data/invitations_repository.dart';
 import '../../features/invitations/presentation/screens/invite_accept_screen.dart';
 import '../../features/invitations/presentation/screens/invite_create_screen.dart';
+import '../../features/more/presentation/more_page.dart';
 import '../../features/plans/presentation/screens/plan_detail_screen.dart';
 import '../../features/plans/presentation/screens/plan_edit_screen.dart';
 import '../../features/plans/presentation/screens/plans_list_screen.dart';
@@ -78,9 +80,7 @@ GoRouter createAppRouter(
         if (pending != null && pending.isNotEmpty) {
           return '/invite/accept?token=$pending';
         }
-        return authCubit.state.user?.roles.contains('student') == true
-            ? '/trainers'
-            : '/home';
+        return '/home';
       }
 
       return null;
@@ -125,48 +125,6 @@ GoRouter createAppRouter(
                     builder: (context, state) => StudentHubPage(
                       studentId: authCubit.state.user?.id ?? '',
                     ),
-                  ),
-                  GoRoute(
-                    path: '/finance',
-                    redirect: (context, state) {
-                      final permissions =
-                          authCubit.state.user?.permissions ?? const <String>[];
-                      return permissions.contains('finance:read_own')
-                          ? null
-                          : '/home';
-                    },
-                    builder: (context, state) => const FinancePage(),
-                  ),
-                  GoRoute(
-                    path: '/tags',
-                    builder: (context, state) => const TagsPage(),
-                  ),
-                  GoRoute(
-                    path: '/tags/:id',
-                    builder: (context, state) =>
-                        TagHubPage(tagId: state.pathParameters['id']!),
-                  ),
-                  GoRoute(
-                    path: '/plans',
-                    builder: (context, state) {
-                      final visible =
-                          state.uri.queryParameters['visible'] == '1';
-                      return PlansListScreen(visibleOnly: visible);
-                    },
-                  ),
-                  GoRoute(
-                    path: '/plans/edit',
-                    builder: (context, state) {
-                      final id = state.uri.queryParameters['id'];
-                      return PlanEditScreen(planId: id);
-                    },
-                  ),
-                  GoRoute(
-                    path: '/plans/:id',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return PlanDetailScreen(planId: id);
-                    },
                   ),
                 ],
               ),
@@ -337,8 +295,58 @@ GoRouter createAppRouter(
                 ],
               ),
               StatefulShellBranch(
-                initialLocation: '/profile',
+                initialLocation: '/more',
                 routes: [
+                  GoRoute(
+                    path: '/more',
+                    redirect: (context, state) =>
+                        authCubit.state.user?.roles.contains('trainer') == true
+                        ? null
+                        : '/profile',
+                    builder: (context, state) => const MorePage(),
+                  ),
+                  GoRoute(
+                    path: '/finance',
+                    redirect: (context, state) {
+                      final permissions =
+                          authCubit.state.user?.permissions ?? const <String>[];
+                      return permissions.contains('finance:read_own')
+                          ? null
+                          : '/home';
+                    },
+                    builder: (context, state) => const FinancePage(),
+                  ),
+                  GoRoute(
+                    path: '/tags',
+                    builder: (context, state) => const TagsPage(),
+                  ),
+                  GoRoute(
+                    path: '/tags/:id',
+                    builder: (context, state) =>
+                        TagHubPage(tagId: state.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: '/plans',
+                    builder: (context, state) {
+                      final visible =
+                          state.uri.queryParameters['visible'] == '1';
+                      return PlansListScreen(visibleOnly: visible);
+                    },
+                  ),
+                  GoRoute(
+                    path: '/plans/edit',
+                    builder: (context, state) {
+                      final id = state.uri.queryParameters['id'];
+                      return PlanEditScreen(planId: id);
+                    },
+                  ),
+                  GoRoute(
+                    path: '/plans/:id',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return PlanDetailScreen(planId: id);
+                    },
+                  ),
                   GoRoute(
                     path: '/profile',
                     builder: (context, state) => const ProfileScreen(),
@@ -365,6 +373,19 @@ GoRouter createAppRouter(
                     path: '/reviews/:id/edit',
                     builder: (context, state) => ReviewEditorScreen(
                       reviewId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                initialLocation: '/chats',
+                routes: [
+                  GoRoute(
+                    path: '/chats',
+                    builder: (context, state) => ChatsPage(
+                      isTrainer:
+                          authCubit.state.user?.roles.contains('trainer') ==
+                          true,
                     ),
                   ),
                 ],

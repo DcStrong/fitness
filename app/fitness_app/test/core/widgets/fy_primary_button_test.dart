@@ -39,7 +39,7 @@ void main() {
 
     expect(find.text('Войти'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
-    expect(tester.getSize(find.byType(FilledButton)).height, 54);
+    expect(tester.getSize(find.byType(FilledButton)).height, 52);
     expect(
       filledButton.style?.backgroundColor?.resolve(<WidgetState>{}),
       AppColors.primary,

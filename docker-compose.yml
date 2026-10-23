@@ -7,7 +7,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: fjghdk12
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: fitness_yoda
     volumes:
       - fitness_yoda_pgdata:/var/lib/postgresql/data

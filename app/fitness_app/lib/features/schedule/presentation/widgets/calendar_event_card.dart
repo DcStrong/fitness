@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/fy_card.dart';
-import '../../../../core/widgets/fy_chip.dart';
+import '../../../../app/theme/app_radii.dart';
+import '../../../../core/widgets/fy_status_chip.dart';
 import '../../domain/calendar_events.dart';
 import '../schedule_format.dart';
+import '../session_status.dart';
 
-const _requestAmber = Color(0xFFE0A800);
-const _requestAmberSoft = Color(0x29E0A800);
-const _availabilitySoft = Color(0xFFF3EDE4);
-const _availabilityAccent = Color(0xFFB08968);
-
+/// DS v2 calendar card. Sessions and requests are white cards with a status
+/// chip; free time is a dashed, filled outline so it never reads as booked.
 class CalendarEventCard extends StatelessWidget {
   const CalendarEventCard({
     required this.event,
@@ -21,6 +19,8 @@ class CalendarEventCard extends StatelessWidget {
 
   final CalendarEvent event;
   final VoidCallback? onTap;
+
+  /// Timeline placement: fills the given height, tighter padding.
   final bool dense;
 
   @override
@@ -29,241 +29,182 @@ class CalendarEventCard extends StatelessWidget {
         '${formatTime(event.startsAt)} – ${formatTime(event.endsAt)}';
     final semanticsLabel =
         '${event.typeLabel}, $interval, ${event.title}, ${event.modeLabel}';
+    final isFree = event.type == CalendarEventType.availability;
+    final radius = BorderRadius.circular(AppRadii.control);
+
+    final content = Padding(
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: dense ? 6 : 12),
+      child: _CardContent(event: event, interval: interval, dense: dense),
+    );
+
+    final card = Material(
+      key: Key('calendar-event-${event.id}'),
+      color: isFree ? AppColors.sunken : AppColors.surface,
+      shape: isFree
+          ? RoundedRectangleBorder(borderRadius: radius)
+          : RoundedRectangleBorder(
+              borderRadius: radius,
+              side: const BorderSide(color: AppColors.border),
+            ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: isFree
+            ? CustomPaint(
+                painter: _DashedBorderPainter(
+                  color: AppColors.borderStrong,
+                  radius: AppRadii.control,
+                ),
+                child: content,
+              )
+            : content,
+      ),
+    );
 
     return Semantics(
       label: semanticsLabel,
       button: onTap != null,
+      excludeSemantics: true,
       child: Padding(
-        padding: EdgeInsets.only(bottom: dense ? 0 : 12),
-        child: FyCard(
-          key: Key('calendar-event-${event.id}'),
-          onTap: onTap,
-          color: _backgroundColor(event),
-          borderRadius: BorderRadius.circular(14),
-          border: _border(event),
-          boxShadow: const [],
-          padding: EdgeInsets.zero,
-          child: dense
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(width: 4, color: _accentColor(event)),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        child: _DenseContent(event: event, interval: interval),
-                      ),
-                    ),
-                  ],
-                )
-              : IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(width: 4, color: _accentColor(event)),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                          child: _FullContent(event: event, interval: interval),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-        ),
+        padding: EdgeInsets.only(bottom: dense ? 0 : 10),
+        child: card,
       ),
     );
   }
-
-  Color _backgroundColor(CalendarEvent event) => switch (event.type) {
-    CalendarEventType.session =>
-      event.isTerminal ? AppColors.canvas : AppColors.mintSoft,
-    CalendarEventType.availability => _availabilitySoft,
-    CalendarEventType.request => _requestAmberSoft,
-  };
-
-  Color _accentColor(CalendarEvent event) => switch (event.type) {
-    CalendarEventType.session =>
-      event.isTerminal ? AppColors.iconInactive : AppColors.primary,
-    CalendarEventType.availability => _availabilityAccent,
-    CalendarEventType.request => _requestAmber,
-  };
-
-  Border? _border(CalendarEvent event) {
-    if (event.type != CalendarEventType.availability) return null;
-    return Border.all(color: AppColors.outlineVariant);
-  }
 }
 
-class _DenseContent extends StatelessWidget {
-  const _DenseContent({required this.event, required this.interval});
+class _CardContent extends StatelessWidget {
+  const _CardContent({
+    required this.event,
+    required this.interval,
+    required this.dense,
+  });
 
   final CalendarEvent event;
   final String interval;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isFree = event.type == CalendarEventType.availability;
+    final muted = isFree || event.isTerminal;
+    final status = calendarEventStatus(event);
+
+    final details = Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: interval,
+            style: TextStyle(
+              fontWeight: isFree ? FontWeight.w500 : FontWeight.w700,
+              color: isFree ? AppColors.textSecondary : AppColors.textPrimary,
+            ),
+          ),
+          TextSpan(
+            text: ' · ${event.modeLabel}',
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.bodySmall,
+    );
+
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: dense ? Alignment.centerLeft : Alignment.topLeft,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  interval,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: _textColor(event),
-                    height: 1.1,
+          LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: muted
+                          ? AppColors.textSecondary
+                          : AppColors.textPrimary,
+                      fontWeight: isFree ? FontWeight.w600 : FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              _ModeChip(event: event, compactLabel: true),
-            ],
+                if (status != null) ...[
+                  const SizedBox(width: 8),
+                  // The name keeps at least half of the row.
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth / 2,
+                    ),
+                    child: FyStatusChip(status: status.$1, label: status.$2),
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 2),
-          Text(
-            event.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: _textColor(event),
-              height: 1.1,
-            ),
-          ),
-          if (event.caption != null && event.caption!.isNotEmpty) ...[
-            const SizedBox(height: 1),
-            Text(
-              event.caption!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 10,
-                height: 1.05,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _FullContent extends StatelessWidget {
-  const _FullContent({required this.event, required this.interval});
-
-  final CalendarEvent event;
-  final String interval;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
+          details,
+          if (!dense && event.caption != null && event.caption!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
               child: Text(
-                interval,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: _textColor(event),
-                ),
+                event.caption!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
               ),
             ),
-            _ModeChip(event: event),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          event.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: _textColor(event),
-          ),
-        ),
-        if (event.caption != null && event.caption!.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            event.caption!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ],
-        const SizedBox(height: 4),
-        Text(
-          '${event.typeLabel} · ${event.modeLabel}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-        ),
-      ],
-    );
-  }
-}
-
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({required this.event, this.compactLabel = false});
-
-  final CalendarEvent event;
-  final bool compactLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final online = event.mode == 'online';
-    final color = switch (event.type) {
-      CalendarEventType.session => AppColors.primary,
-      CalendarEventType.availability => _availabilityAccent,
-      CalendarEventType.request => _requestAmber,
-    };
-    final label = event.type == CalendarEventType.request
-        ? (compactLabel ? 'Заявка' : event.typeLabel)
-        : (online ? 'Онлайн' : 'Офлайн');
-
-    return FyChip(
-      label: label,
-      compact: true,
-      showCheckmark: false,
-      showBorder: false,
-      selected: false,
-      foregroundColor: color,
-      backgroundColor: Colors.transparent,
-      leading: Container(
-        width: 7,
-        height: 7,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }
 }
 
-Color _textColor(CalendarEvent event) {
-  if (event.type == CalendarEventType.session && event.isTerminal) {
-    return AppColors.textMuted;
+/// Chip shown on a calendar card; free time has none.
+(FyStatus, String)? calendarEventStatus(CalendarEvent event) {
+  return switch (event.type) {
+    CalendarEventType.availability => null,
+    CalendarEventType.request => (FyStatus.waiting, 'Ждёт ответа'),
+    CalendarEventType.session => sessionStatusChip(event.sessionStatus),
+  };
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  _DashedBorderPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          Radius.circular(radius),
+        ).deflate(0.6),
+      );
+    const dash = 5.0;
+    const gap = 4.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(metric.extractPath(distance, distance + dash), paint);
+        distance += dash + gap;
+      }
+    }
   }
-  return AppColors.textPrimary;
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.radius != radius;
 }

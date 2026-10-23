@@ -114,7 +114,7 @@ List<CalendarEvent> mapCalendarEvents({
         secondaryLabel: terminal
             ? _sessionStatusLabel(session.status)
             : session.calendarWorkoutLabel,
-        mode: 'offline',
+        mode: session.mode,
         sessionId: session.id,
         sessionStatus: session.status,
         isTerminal: terminal,

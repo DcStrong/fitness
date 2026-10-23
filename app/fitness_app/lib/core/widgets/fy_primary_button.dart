@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_radii.dart';
+import '../../app/theme/app_theme.dart';
 import 'fy_button.dart';
 import 'fy_motion.dart';
 
@@ -82,11 +84,14 @@ class _TrailingArrowPrimaryState extends State<_TrailingArrowPrimary> {
           disabledForegroundColor: AppColors.onPrimary.withValues(alpha: 0.8),
           minimumSize: Size(0, FyButton.heightFor(FyButtonSize.large)),
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          shape: const StadiumBorder(),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
+          ),
           textStyle: const TextStyle(
             inherit: false,
+            fontFamily: AppTheme.fontFamily,
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
         child: widget.isLoading

@@ -48,6 +48,32 @@ String formatCalendarDayTitle(DateTime date) {
   return '$weekday, ${day.day} ${_monthsGenitive[day.month - 1]}';
 }
 
+/// Line under the toolbar title: «Четверг · сегодня», «Неделя 19–25»…
+String formatCalendarPeriodSubtitle(
+  CalendarMode mode,
+  DateTime anchor,
+  DateTime now,
+) {
+  final day = calendarDateOnly(anchor);
+  switch (mode) {
+    case CalendarMode.day:
+      final weekday = _weekdayLongRu[mondayBasedWeekday(day)];
+      final today = calendarDateOnly(now);
+      final diff = day.difference(today).inDays;
+      final relative = switch (diff) {
+        0 => ' · сегодня',
+        1 => ' · завтра',
+        -1 => ' · вчера',
+        _ => '',
+      };
+      return '$weekday$relative';
+    case CalendarMode.week:
+      return 'Неделя';
+    case CalendarMode.month:
+      return 'Месяц';
+  }
+}
+
 String formatCalendarPeriodTitle(CalendarMode mode, DateTime anchor) {
   final day = calendarDateOnly(anchor);
   switch (mode) {

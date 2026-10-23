@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/fy_card.dart';
 import '../../core/widgets/fy_motion.dart';
 import '../../features/auth/presentation/cubit/auth_cubit.dart';
 import '../../features/auth/presentation/cubit/auth_state.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radii.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -29,38 +32,46 @@ class AppShell extends StatelessWidget {
             branchIndex: navigationShell.currentIndex,
             child: navigationShell,
           ),
-          bottomNavigationBar: Material(
-            color: Theme.of(context).colorScheme.surface,
-            elevation: 8,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            clipBehavior: Clip.antiAlias,
-            child: SafeArea(
-              top: false,
-              child: NavigationBar(
-                selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                labelBehavior:
-                    NavigationDestinationLabelBehavior.onlyShowSelected,
-                destinations: [
-                  for (final destination in destinations)
-                    NavigationDestination(
-                      icon: Icon(destination.icon),
-                      selectedIcon: Icon(destination.selectedIcon),
-                      label: destination.label,
-                    ),
-                ],
-                onDestinationSelected: (index) {
-                  final destination = destinations[index];
-                  final location = destination.location;
-                  if (location != null) {
-                    context.go(location);
-                    return;
-                  }
-                  navigationShell.goBranch(
-                    destination.branchIndex,
-                    initialLocation:
-                        destination.branchIndex == navigationShell.currentIndex,
-                  );
-                },
+          bottomNavigationBar: SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppRadii.card),
+                border: Border.all(color: AppColors.border),
+                boxShadow: fyShadowLevel2,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadii.card),
+                child: NavigationBar(
+                  height: 64,
+                  backgroundColor: Colors.transparent,
+                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  destinations: [
+                    for (final destination in destinations)
+                      NavigationDestination(
+                        icon: Icon(destination.icon),
+                        selectedIcon: Icon(destination.selectedIcon),
+                        label: destination.label,
+                      ),
+                  ],
+                  onDestinationSelected: (index) {
+                    final destination = destinations[index];
+                    final location = destination.location;
+                    if (location != null) {
+                      context.go(location);
+                      return;
+                    }
+                    navigationShell.goBranch(
+                      destination.branchIndex,
+                      initialLocation:
+                          destination.branchIndex ==
+                          navigationShell.currentIndex,
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -175,79 +186,105 @@ int appShellSelectedIndex({
   return branchIndex < 0 ? 0 : branchIndex;
 }
 
+/// Shell branches, in the order of [StatefulShellRoute] branches.
+abstract final class AppShellBranch {
+  static const home = 0;
+  static const schedule = 1;
+  static const students = 2;
+  static const more = 3;
+  static const chats = 4;
+}
+
 List<AppShellDestination> appShellDestinationsForRoles(Iterable<String> roles) {
   final isTrainer = roles.contains('trainer');
 
   if (!isTrainer && roles.contains('student')) {
     return const [
       AppShellDestination(
-        branchIndex: 2,
-        label: 'Тренеры',
-        icon: Icons.person_search_outlined,
-        selectedIcon: Icons.person_search,
-        location: '/trainers',
+        branchIndex: AppShellBranch.home,
+        label: 'Главная',
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home_rounded,
+        location: '/home',
       ),
       AppShellDestination(
-        branchIndex: 1,
+        branchIndex: AppShellBranch.schedule,
+        label: 'Запись',
+        icon: Icons.event_available_outlined,
+        selectedIcon: Icons.event_available_rounded,
+        location: '/schedule/book',
+        activePathPrefixes: ['/booking-requests', '/trainers'],
+      ),
+      AppShellDestination(
+        branchIndex: AppShellBranch.schedule,
         label: 'Тренировки',
-        icon: Icons.self_improvement_outlined,
-        selectedIcon: Icons.self_improvement_rounded,
+        icon: Icons.fitness_center_outlined,
+        selectedIcon: Icons.fitness_center_rounded,
         location: '/sessions',
+        activePathPrefixes: ['/me/training'],
       ),
       AppShellDestination(
-        branchIndex: 1,
-        label: 'Мои заявки',
-        icon: Icons.event_note_outlined,
-        selectedIcon: Icons.event_note_rounded,
-        location: '/booking-requests/mine',
-        activePathPrefixes: ['/booking-requests'],
+        branchIndex: AppShellBranch.chats,
+        label: 'Чат',
+        icon: Icons.chat_bubble_outline_rounded,
+        selectedIcon: Icons.chat_bubble_rounded,
+        location: '/chats',
       ),
       AppShellDestination(
-        branchIndex: 3,
+        branchIndex: AppShellBranch.more,
         label: 'Профиль',
         icon: Icons.person_outline_rounded,
         selectedIcon: Icons.person_rounded,
         location: '/profile',
+        activePathPrefixes: ['/reviews'],
       ),
     ];
   }
 
-  return [
-    const AppShellDestination(
-      branchIndex: 0,
+  return const [
+    AppShellDestination(
+      branchIndex: AppShellBranch.home,
       label: 'Главная',
       icon: Icons.home_outlined,
       selectedIcon: Icons.home_rounded,
       location: '/home',
     ),
-    const AppShellDestination(
-      branchIndex: 1,
+    AppShellDestination(
+      branchIndex: AppShellBranch.schedule,
       label: 'Расписание',
       icon: Icons.calendar_month_outlined,
       selectedIcon: Icons.calendar_month_rounded,
       location: '/schedule',
-    ),
-    const AppShellDestination(
-      branchIndex: 0,
-      label: 'Тренировки',
-      icon: Icons.fitness_center_outlined,
-      selectedIcon: Icons.fitness_center,
-      location: '/plans',
-      activePathPrefixes: ['/plans', '/tags'],
+      activePathPrefixes: ['/sessions', '/booking-requests'],
     ),
     AppShellDestination(
-      branchIndex: 2,
-      label: isTrainer ? 'Ученики' : 'Тренер',
-      icon: isTrainer ? Icons.groups_outlined : Icons.person_search_outlined,
-      selectedIcon: isTrainer ? Icons.groups_rounded : Icons.person_search,
-      location: isTrainer ? '/session-packages' : '/invite/accept',
+      branchIndex: AppShellBranch.students,
+      label: 'Ученики',
+      icon: Icons.groups_outlined,
+      selectedIcon: Icons.groups_rounded,
+      location: '/session-packages',
+      activePathPrefixes: ['/students', '/invite'],
     ),
-    const AppShellDestination(
-      branchIndex: 3,
-      label: 'Профиль',
-      icon: Icons.person_outline_rounded,
-      selectedIcon: Icons.person_rounded,
-      location: '/profile',
+    AppShellDestination(
+      branchIndex: AppShellBranch.chats,
+      label: 'Чаты',
+      icon: Icons.chat_bubble_outline_rounded,
+      selectedIcon: Icons.chat_bubble_rounded,
+      location: '/chats',
+    ),
+    AppShellDestination(
+      branchIndex: AppShellBranch.more,
+      label: 'Ещё',
+      icon: Icons.menu_rounded,
+      selectedIcon: Icons.menu_open_rounded,
+      location: '/more',
+      activePathPrefixes: [
+        '/plans',
+        '/tags',
+        '/finance',
+        '/profile',
+        '/reviews',
+      ],
     ),
   ];
 }

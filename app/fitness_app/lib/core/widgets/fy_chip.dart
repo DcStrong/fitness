@@ -35,22 +35,19 @@ class FyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // DS v2 filter chip: selected = primary-soft fill + primary outline.
     final fg = selected
-        ? (selectedForeground ?? AppColors.onPrimary)
+        ? (selectedForeground ?? AppColors.primary)
         : (foregroundColor ?? AppColors.textPrimary);
     final bg = selected
-        ? (selectedColor ?? AppColors.primary)
+        ? (selectedColor ?? AppColors.primarySoft)
         : (backgroundColor ?? AppColors.surface);
-    final borderColor = selected
-        ? AppColors.primary
-        : (outlined
-              ? AppColors.outlineVariant
-              : AppColors.textMuted.withValues(alpha: 0.35));
+    final borderColor = selected ? AppColors.primary : AppColors.border;
 
     final labelStyle = TextStyle(
       color: fg,
-      fontWeight: FontWeight.w600,
-      fontSize: compact ? 11 : 14,
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+      fontSize: compact ? 12 : 14,
       height: 1.1,
     );
 
@@ -71,13 +68,15 @@ class FyChip extends StatelessWidget {
 
     final padding = compact
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
-        : const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 11);
 
     final box = DecoratedBox(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: showBorder ? Border.all(color: borderColor) : null,
+        border: showBorder
+            ? Border.all(color: borderColor, width: compact ? 1 : 1.5)
+            : null,
       ),
       child: Padding(padding: padding, child: child),
     );

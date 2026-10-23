@@ -12,9 +12,6 @@ import 'package:fitness_app/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:fitness_app/features/auth/presentation/cubit/auth_state.dart';
 import 'package:fitness_app/features/social/data/social_models.dart';
 import 'package:fitness_app/features/social/data/social_repository.dart';
-import 'package:fitness_app/features/schedule/data/schedule_models.dart';
-import 'package:fitness_app/features/schedule/presentation/screens/student_book_screen.dart';
-import 'package:fitness_app/features/finance/data/finance_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -187,37 +184,6 @@ void main() {
     await tester.pump();
 
     verify(() => cubit.withdraw('request')).called(1);
-  });
-
-  testWidgets('student review explains pending submission and submits', (
-    tester,
-  ) async {
-    var submitted = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: StudentBookingReviewSheet(
-            slot: ScheduleSlot(
-              id: 'slot',
-              coachId: 'coach',
-              startsAt: DateTime.utc(2026, 7, 21, 10).toIso8601String(),
-              endsAt: DateTime.utc(2026, 7, 21, 11).toIso8601String(),
-              mode: 'online',
-              status: 'open',
-              price: const MoneyAmount(amountMinor: '250000', currency: 'RUB'),
-            ),
-            onSubmit: () => submitted = true,
-          ),
-        ),
-      ),
-    );
-
-    expect(find.text('Проверьте заявку'), findsOneWidget);
-    expect(find.text('онлайн'), findsOneWidget);
-    expect(find.textContaining('после решения тренера'), findsOneWidget);
-    await tester.tap(find.text('Отправить заявку'));
-    expect(submitted, isTrue);
   });
 
   testWidgets('student conflict is shown as Russian feedback', (tester) async {

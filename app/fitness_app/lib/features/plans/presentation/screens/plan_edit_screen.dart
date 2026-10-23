@@ -241,24 +241,26 @@ class _PlanEditorViewState extends State<PlanEditorView> {
           title: Text('Создать «$name»'),
           content: StatefulBuilder(
             builder: (context, setLocal) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final option in const [
-                    ('weight_reps', 'Вес × повторы'),
-                    ('bodyweight_reps', 'Свои повторы'),
-                    ('duration', 'Время'),
-                  ])
-                    RadioListTile<String>(
-                      title: Text(option.$2),
-                      value: option.$1,
-                      groupValue: kind,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setLocal(() => kind = value);
-                      },
-                    ),
-                ],
+              return RadioGroup<String>(
+                groupValue: kind,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setLocal(() => kind = value);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final option in const [
+                      ('weight_reps', 'Вес × повторы'),
+                      ('bodyweight_reps', 'Свои повторы'),
+                      ('duration', 'Время'),
+                    ])
+                      RadioListTile<String>(
+                        title: Text(option.$2),
+                        value: option.$1,
+                      ),
+                  ],
+                ),
               );
             },
           ),

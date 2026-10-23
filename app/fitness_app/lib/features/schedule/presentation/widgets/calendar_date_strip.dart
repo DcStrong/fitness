@@ -25,7 +25,7 @@ class CalendarDateStrip extends StatelessWidget {
       label: 'Лента дат недели',
       child: SizedBox(
         key: const Key('calendar-date-strip'),
-        height: 64,
+        height: 60,
         child: Row(
           children: [
             for (final day in days)
@@ -70,12 +70,15 @@ class _DateStripCell extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           key: Key('calendar-strip-day-${calendarDayKey(day)}'),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Ink(
             decoration: BoxDecoration(
-              color: selected ? AppColors.mintSoft : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              color: selected ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              border: isToday && !selected
+                  ? Border.all(color: AppColors.primary, width: 1.5)
+                  : null,
             ),
             child: Semantics(
               button: true,
@@ -90,15 +93,14 @@ class _DateStripCell extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          isToday ? 'Сегодня' : weekday,
-                          style: Theme.of(context).textTheme.labelSmall
+                          weekday,
+                          style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 height: 1.1,
-                                fontSize: 10,
-                                color: selected || isToday
-                                    ? AppColors.primary
-                                    : AppColors.textMuted,
+                                color: selected
+                                    ? AppColors.onPrimaryMuted
+                                    : AppColors.textSecondary,
                               ),
                         ),
                         const SizedBox(height: 2),
@@ -108,7 +110,9 @@ class _DateStripCell extends StatelessWidget {
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 height: 1.1,
-                                color: selected || isToday
+                                color: selected
+                                    ? AppColors.onPrimary
+                                    : isToday
                                     ? AppColors.primary
                                     : AppColors.textPrimary,
                               ),

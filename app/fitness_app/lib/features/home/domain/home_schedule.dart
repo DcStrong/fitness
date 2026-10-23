@@ -140,3 +140,21 @@ bool isExpiredBookedSession(TrainingSession session, DateTime now) {
   final end = DateTime.parse(session.endsAt).toLocal();
   return !end.isAfter(now);
 }
+
+/// The session the hero card points at: the one running now, else the
+/// nearest booked one that has not ended yet.
+TrainingSession? homeNextSession(
+  Iterable<TrainingSession> sessions,
+  DateTime now,
+) {
+  final open =
+      sessions.where((session) {
+        if (session.status != 'booked') return false;
+        return DateTime.parse(session.endsAt).toLocal().isAfter(now);
+      }).toList()..sort(
+        (left, right) => DateTime.parse(
+          left.startsAt,
+        ).compareTo(DateTime.parse(right.startsAt)),
+      );
+  return open.isEmpty ? null : open.first;
+}

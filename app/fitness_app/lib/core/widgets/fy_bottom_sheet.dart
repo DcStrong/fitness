@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_radii.dart';
 
 /// Shared Fitness Yoda modal bottom sheet shell.
 Future<T?> showFyBottomSheet<T>({
@@ -17,7 +18,7 @@ Future<T?> showFyBottomSheet<T>({
     useSafeArea: useSafeArea,
     backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.sheet)),
     ),
     builder: builder,
   );

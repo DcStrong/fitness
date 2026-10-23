@@ -4,135 +4,91 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('appShellDestinationsForRoles', () {
-    test('uses trainer destinations and invite route', () {
+    test('trainer gets home, schedule, students, chats and more', () {
       final destinations = appShellDestinationsForRoles(const ['trainer']);
 
-      expect(destinations.map((destination) => destination.branchIndex), [
-        0,
-        1,
-        0,
-        2,
-        3,
-      ]);
-      expect(destinations.map((destination) => destination.label), [
+      expect(destinations.map((d) => d.label), [
         'Главная',
         'Расписание',
-        'Тренировки',
         'Ученики',
-        'Профиль',
+        'Чаты',
+        'Ещё',
       ]);
-      expect(destinations[0].location, '/home');
-      expect(destinations[1].location, '/schedule');
-      expect(destinations[2].location, '/plans');
-      expect(destinations[2].activePathPrefixes, ['/plans', '/tags']);
-      expect(destinations[3].location, '/session-packages');
-      expect(destinations[4].location, '/profile');
+      expect(destinations.map((d) => d.branchIndex), [0, 1, 2, 4, 3]);
+      expect(destinations.map((d) => d.location), [
+        '/home',
+        '/schedule',
+        '/session-packages',
+        '/chats',
+        '/more',
+      ]);
     });
 
-    test('uses student social destinations', () {
+    test('student gets home, booking, workouts, chat and profile', () {
       final destinations = appShellDestinationsForRoles(const ['student']);
 
-      expect(destinations.map((destination) => destination.label), [
-        'Тренеры',
+      expect(destinations.map((d) => d.label), [
+        'Главная',
+        'Запись',
         'Тренировки',
-        'Мои заявки',
+        'Чат',
         'Профиль',
       ]);
-      expect(destinations.map((destination) => destination.branchIndex), [
-        2,
-        1,
-        1,
-        3,
+      expect(destinations.map((d) => d.branchIndex), [0, 1, 1, 4, 3]);
+      expect(destinations.map((d) => d.location), [
+        '/home',
+        '/schedule/book',
+        '/sessions',
+        '/chats',
+        '/profile',
       ]);
-      expect(destinations[0].location, '/trainers');
-      expect(destinations[1].location, '/sessions');
-      expect(destinations[2].location, '/booking-requests/mine');
     });
   });
 
   group('appShellSelectedIndex', () {
-    test('selects schedule branch for trainer calendar routes', () {
-      final destinations = appShellDestinationsForRoles(const ['trainer']);
-
-      expect(
+    int selected(List<String> roles, int branch, String location) =>
         appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 1,
-          currentLocation: '/schedule',
-        ),
-        1,
-      );
+          destinations: appShellDestinationsForRoles(roles),
+          currentBranchIndex: branch,
+          currentLocation: location,
+        );
+
+    test('trainer schedule tab covers sessions and requests', () {
+      expect(selected(const ['trainer'], 1, '/schedule'), 1);
+      expect(selected(const ['trainer'], 1, '/schedule/recurring'), 1);
+      expect(selected(const ['trainer'], 1, '/sessions/abc'), 1);
+      expect(selected(const ['trainer'], 1, '/booking-requests/inbox'), 1);
     });
 
-    test('home tab stays home after visiting workouts and students', () {
-      final destinations = appShellDestinationsForRoles(const ['trainer']);
-
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 0,
-          currentLocation: '/home',
-        ),
-        0,
-      );
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 0,
-          currentLocation: '/plans',
-        ),
-        2,
-      );
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 2,
-          currentLocation: '/session-packages',
-        ),
-        3,
-      );
+    test('trainer students tab covers student cards and invites', () {
+      expect(selected(const ['trainer'], 2, '/session-packages'), 2);
+      expect(selected(const ['trainer'], 2, '/students/42'), 2);
+      expect(selected(const ['trainer'], 2, '/invite'), 2);
     });
 
-    test('selects student requests and keeps sessions distinct', () {
-      final destinations = appShellDestinationsForRoles(const ['student']);
-
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 1,
-          currentLocation: '/booking-requests/mine',
-        ),
-        2,
-      );
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 1,
-          currentLocation: '/sessions',
-        ),
-        1,
-      );
+    test('trainer more tab covers workouts, finance and profile', () {
+      for (final location in const [
+        '/more',
+        '/plans',
+        '/plans/1',
+        '/tags',
+        '/finance',
+        '/profile',
+        '/reviews',
+      ]) {
+        expect(selected(const ['trainer'], 3, location), 4, reason: location);
+      }
+      expect(selected(const ['trainer'], 4, '/chats'), 3);
+      expect(selected(const ['trainer'], 0, '/home'), 0);
     });
 
-    test('highlights trainer workouts tab for plans and tags', () {
-      final destinations = appShellDestinationsForRoles(const ['trainer']);
-
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 0,
-          currentLocation: '/plans',
-        ),
-        2,
-      );
-      expect(
-        appShellSelectedIndex(
-          destinations: destinations,
-          currentBranchIndex: 0,
-          currentLocation: '/tags',
-        ),
-        2,
-      );
+    test('student booking and workouts stay distinct in one branch', () {
+      expect(selected(const ['student'], 1, '/schedule/book'), 1);
+      expect(selected(const ['student'], 1, '/booking-requests/mine'), 1);
+      expect(selected(const ['student'], 2, '/trainers/7'), 1);
+      expect(selected(const ['student'], 1, '/sessions'), 2);
+      expect(selected(const ['student'], 0, '/me/training'), 2);
+      expect(selected(const ['student'], 3, '/profile'), 4);
     });
   });
 
@@ -155,8 +111,7 @@ void main() {
             home: Scaffold(
               bottomNavigationBar: NavigationBar(
                 selectedIndex: 0,
-                labelBehavior:
-                    NavigationDestinationLabelBehavior.onlyShowSelected,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 destinations: [
                   for (final destination in destinations)
                     NavigationDestination(

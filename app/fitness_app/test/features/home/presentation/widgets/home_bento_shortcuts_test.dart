@@ -121,12 +121,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: const Scaffold(
-          body: HomeStatChips(
-            isTrainer: true,
-            todayCount: 2,
-            weekCount: 5,
-            state: HomeState(),
-          ),
+          body: HomeStatChips(todayCount: 2, weekCount: 5, state: HomeState()),
         ),
       ),
     );
@@ -146,7 +141,6 @@ void main() {
         theme: AppTheme.light(),
         home: const Scaffold(
           body: HomeStatChips(
-            isTrainer: true,
             todayCount: 2,
             weekCount: 5,
             state: HomeState(

@@ -7,6 +7,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('mapCalendarEvents', () {
+    test('session event keeps the session mode', () {
+      final events = mapCalendarEvents(
+        sessions: [
+          _session(
+            id: 'online',
+            startsAt: '2026-07-19T12:00:00.000Z',
+            endsAt: '2026-07-19T13:00:00.000Z',
+            mode: 'online',
+          ),
+        ],
+        slots: const [],
+        requests: const [],
+      );
+
+      expect(events.single.mode, 'online');
+    });
+
     test('sorts chronologically and labels types', () {
       final events = mapCalendarEvents(
         sessions: [
@@ -240,6 +257,7 @@ TrainingSession _session({
   String status = 'booked',
   String studentEmail = 'student@example.com',
   List<SessionWorkoutAttached> workouts = const [],
+  String mode = 'offline',
 }) {
   return TrainingSession(
     id: id,
@@ -252,6 +270,7 @@ TrainingSession _session({
     studentEmail: studentEmail,
     finance: const SessionFinance(status: 'not_tracked'),
     workouts: workouts,
+    mode: mode,
   );
 }
 

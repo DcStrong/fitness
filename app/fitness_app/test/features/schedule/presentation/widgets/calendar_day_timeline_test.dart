@@ -30,7 +30,7 @@ void main() {
     ]);
   });
 
-  test('working hours stay visible even without bookings', () {
+  test('working hours stay visible as one continuous run', () {
     final day = DateTime(2026, 8, 16); // Sunday
     final working = workingHoursForDay(
       day: day,
@@ -50,42 +50,29 @@ void main() {
 
     expect(working, [9, 10, 11, 12, 14, 15, 16, 17, 18]);
 
+    // The grid stays continuous: the 13:00 break is shown as an empty hour.
     final hours = debugTimelineHours(const [], workingHours: working);
-    expect(hours, working);
-    expect(hours.contains(13), isFalse); // break
+    expect(hours, [for (var hour = 9; hour <= 18; hour++) hour]);
   });
 
-  test('out-of-band session sits right after last working hour', () {
+  test('hours run continuously up to an out-of-band session', () {
     final day = DateTime(2026, 8, 16);
     final working = [9, 10, 11, 12, 14, 15, 16, 17, 18];
     final events = [
       event(
-        id: 'booked',
-        startsAt: DateTime(day.year, day.month, day.day, 12, 10),
-        endsAt: DateTime(day.year, day.month, day.day, 13, 10),
-      ),
-      event(
         id: 'late',
-        startsAt: DateTime(day.year, day.month, day.day, 23),
-        endsAt: DateTime(day.year, day.month, day.day + 1),
+        startsAt: DateTime(day.year, day.month, day.day, 21),
+        endsAt: DateTime(day.year, day.month, day.day, 22),
       ),
     ];
 
     final hours = debugTimelineHours(events, workingHours: working);
-    // 12:10–13:10 booking also covers hour 13; empty 19–22 stay collapsed.
-    expect(hours, [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 23]);
-    expect(hours.contains(19), isFalse);
-    expect(hours.contains(20), isFalse);
-    expect(hours.contains(21), isFalse);
-    expect(hours.contains(22), isFalse);
-
-    final hourHeights = debugTimelineHourHeights(events, workingHours: working);
-    final tops = debugTimelineTops(events, workingHours: working);
-    final lateIndex = hours.indexOf(23);
-    final expectedLateTop = hourHeights
-        .take(lateIndex)
-        .fold<double>(0, (sum, height) => sum + height);
-    expect(tops.last, expectedLateTop);
+    expect(hours, [for (var hour = 9; hour <= 21; hour++) hour]);
+    // 21:00 is 12 hours below 09:00 at 64 px per hour.
+    expect(
+      debugTimelineTops(events, workingHours: working).single,
+      12 * 64 + 1,
+    );
   });
 
   test('slots enrich working hours beyond weekly windows', () {
@@ -124,42 +111,30 @@ void main() {
     expect(hours, containsAll([9, 10, 11, 12, 20]));
   });
 
-  test(
-    'mid-hour 60-minute session expands start hour and stays above next band',
-    () {
-      final day = DateTime(2026, 8, 16);
-      final working = [12, 13, 14];
-      final events = [
-        event(
-          id: 'mid',
-          startsAt: DateTime(day.year, day.month, day.day, 12, 10),
-          endsAt: DateTime(day.year, day.month, day.day, 13, 10),
-        ),
-      ];
-
-      final px = debugTimelinePxPerMinute(events);
-      expect(px, 1.2);
-
-      final hourHeights = debugTimelineHourHeights(
-        events,
-        workingHours: working,
-      );
-      final tops = debugTimelineTops(events, workingHours: working);
-      final heights = debugTimelineHeights(events, workingHours: working);
-
-      // Start hour grows: 10min offset + 60min card at baseline scale.
-      expect(hourHeights[0], 10 * px + 60 * px);
-      expect(hourHeights[1], 60 * px); // 13 stays baseline
-      expect(tops.single, 10 * px);
-      expect(heights.single, 60 * px);
-      // Card bottom lands on the 13:00 boundary — no invasion into hour 13 band.
-      expect(tops.single + heights.single, hourHeights[0]);
-    },
-  );
-
-  test('hour-aligned session keeps baseline scale and hour height', () {
+  test('cards sit exactly on the clock: 13:20–14:20 spans two hour bands', () {
     final day = DateTime(2026, 8, 16);
-    final working = [12, 13, 14];
+    final events = [
+      event(
+        id: 'mid',
+        startsAt: DateTime(day.year, day.month, day.day, 13, 20),
+        endsAt: DateTime(day.year, day.month, day.day, 14, 20),
+      ),
+    ];
+    final working = [12, 13, 14, 15];
+
+    final top = debugTimelineTops(events, workingHours: working).single;
+    final height = debugTimelineHeights(events, workingHours: working).single;
+    const px = 64 / 60;
+    expect(top, closeTo(80 * px + 1, 0.01)); // 12:00 + 1h20m
+    expect(height, closeTo(60 * px - 2, 0.01));
+    expect(debugOffHourMarkers(events, workingHours: working), [
+      '13:20',
+      '14:20',
+    ]);
+  });
+
+  test('whole-hour sessions add no off-hour markers', () {
+    final day = DateTime(2026, 8, 16);
     final events = [
       event(
         id: 'aligned',
@@ -167,49 +142,25 @@ void main() {
         endsAt: DateTime(day.year, day.month, day.day, 13),
       ),
     ];
-
-    expect(debugTimelinePxPerMinute(events), 1.2);
-    final hourHeights = debugTimelineHourHeights(events, workingHours: working);
-    expect(hourHeights, everyElement(72.0));
-    expect(debugTimelineTops(events, workingHours: working).single, 0);
+    expect(debugOffHourMarkers(events), isEmpty);
   });
 
-  test('empty working hour remains on scaled grid', () {
+  test('back-to-back short sessions never overlap', () {
     final day = DateTime(2026, 8, 16);
-    final working = [12, 13, 14];
     final events = [
       event(
-        id: 'mid',
-        startsAt: DateTime(day.year, day.month, day.day, 12, 10),
-        endsAt: DateTime(day.year, day.month, day.day, 13, 10),
-      ),
-    ];
-
-    final hours = debugTimelineHours(events, workingHours: working);
-    expect(hours, containsAll([12, 13, 14]));
-    final hourHeights = debugTimelineHourHeights(events, workingHours: working);
-    expect(hourHeights[2], 72.0); // empty 14 stays baseline
-  });
-
-  test('half-hour labels only on hours with :30 boundaries', () {
-    final day = DateTime(2026, 8, 16);
-    final working = [12, 13, 14];
-    final halfHour = [
-      event(
-        id: 'half',
-        startsAt: DateTime(day.year, day.month, day.day, 12, 30),
-        endsAt: DateTime(day.year, day.month, day.day, 13, 30),
-      ),
-    ];
-    final wholeHour = [
-      event(
-        id: 'whole',
+        id: 'a',
         startsAt: DateTime(day.year, day.month, day.day, 12),
+        endsAt: DateTime(day.year, day.month, day.day, 12, 30),
+      ),
+      event(
+        id: 'b',
+        startsAt: DateTime(day.year, day.month, day.day, 12, 30),
         endsAt: DateTime(day.year, day.month, day.day, 13),
       ),
     ];
-
-    expect(debugHalfHourLabelHours(halfHour, workingHours: working), {12, 13});
-    expect(debugHalfHourLabelHours(wholeHour, workingHours: working), isEmpty);
+    final tops = debugTimelineTops(events);
+    final heights = debugTimelineHeights(events);
+    expect(tops[1], greaterThanOrEqualTo(tops[0] + heights[0]));
   });
 }

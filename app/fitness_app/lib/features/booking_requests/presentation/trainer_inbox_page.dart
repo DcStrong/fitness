@@ -16,23 +16,28 @@ import 'widgets/fy_booking_request_card.dart';
 import '../../../core/widgets/fy_top_bar.dart';
 
 class TrainerInboxPage extends StatelessWidget {
-  const TrainerInboxPage({super.key});
+  const TrainerInboxPage({this.embedded = false, super.key});
+
+  /// Inside the schedule tabs: the page header is already there.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
     create: (context) =>
         TrainerInboxCubit(repository: context.read<BookingRequestsRepository>())
           ..load(),
-    child: const TrainerInboxView(),
+    child: TrainerInboxView(embedded: embedded),
   );
 }
 
 class TrainerInboxView extends StatelessWidget {
-  const TrainerInboxView({super.key});
+  const TrainerInboxView({this.embedded = false, super.key});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: const FyTopBar(title: 'Заявки'),
+    appBar: embedded ? null : const FyTopBar(title: 'Заявки'),
     body: BlocConsumer<TrainerInboxCubit, TrainerInboxState>(
       listenWhen: (previous, current) =>
           current.message != null && current.message != previous.message,
@@ -68,7 +73,7 @@ class TrainerInboxView extends StatelessWidget {
             onRefresh: context.read<TrainerInboxCubit>().refresh,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
               children: const [
                 FyCard(
                   child: FyInfoBanner(
@@ -83,8 +88,15 @@ class TrainerInboxView extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: context.read<TrainerInboxCubit>().refresh,
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Нужно ответить',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
               for (final request in state.items) ...[
                 _InboxCard(
                   request: request,

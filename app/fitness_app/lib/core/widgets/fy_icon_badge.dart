@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 
-/// Circular or squircle mint tile for icons on cards (hub, library, tags).
+/// Rounded-square (or circular) primary-soft tile for icons on cards.
 class FyIconBadge extends StatelessWidget {
   const FyIconBadge({
     required this.icon,
     this.size = 44,
     this.iconSize = 22,
-    this.circle = true,
+    this.circle = false,
     super.key,
   });
 
@@ -23,9 +23,9 @@ class FyIconBadge extends StatelessWidget {
       dimension: size,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.mintSoft,
+          color: AppColors.primarySoft,
           shape: circle ? BoxShape.circle : BoxShape.rectangle,
-          borderRadius: circle ? null : BorderRadius.circular(16),
+          borderRadius: circle ? null : BorderRadius.circular(12),
         ),
         child: Icon(icon, size: iconSize, color: AppColors.primary),
       ),

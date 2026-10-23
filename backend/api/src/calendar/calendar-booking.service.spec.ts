@@ -41,6 +41,16 @@ describe('CalendarBookingService.bookAtTime', () => {
     mode: 'offline' as const,
   };
 
+  // Booked slot with an active session: overlaps baseInput and is not healed.
+  const occupiedSlot = {
+    id: 'slot-occupied',
+    coachId: 'coach-1',
+    startsAt: new Date('2026-09-01T15:30:00.000Z'),
+    endsAt: new Date('2026-09-01T16:30:00.000Z'),
+    mode: 'offline',
+    status: 'booked',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     links.findByPair.mockResolvedValue({ id: 'link-1' });
@@ -53,6 +63,8 @@ describe('CalendarBookingService.bookAtTime', () => {
     const qb = {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
       getExists: jest.fn().mockResolvedValue(false),
     };
     manager.createQueryBuilder.mockReturnValue(qb);
@@ -84,6 +96,8 @@ describe('CalendarBookingService.bookAtTime', () => {
     const qb = {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([occupiedSlot]),
       getExists: jest.fn().mockResolvedValue(true),
     };
     manager.createQueryBuilder.mockReturnValue(qb);
@@ -114,6 +128,8 @@ describe('CalendarBookingService.bookAtTime', () => {
     const qb = {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([occupiedSlot]),
       getExists: jest.fn().mockResolvedValue(true),
     };
     manager.createQueryBuilder.mockReturnValue(qb);
