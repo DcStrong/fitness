@@ -146,7 +146,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               ),
-              _MoreGroup(items: section),
+              MoreMenuGroup(items: section),
             ],
             const SizedBox(height: AppSpacing.lg),
             Center(
@@ -165,8 +165,9 @@ class MorePage extends StatelessWidget {
   }
 }
 
-class _MoreGroup extends StatelessWidget {
-  const _MoreGroup({required this.items});
+/// Rows of [MoreMenuItem] in one card (also used on the profile).
+class MoreMenuGroup extends StatelessWidget {
+  const MoreMenuGroup({required this.items, super.key});
 
   final List<MoreMenuItem> items;
 
