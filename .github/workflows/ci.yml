@@ -84,3 +84,11 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  docker:
+    name: Docker (deploy images build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/api/Dockerfile -t fy-api .
+      - run: docker build -f deploy/web/Dockerfile --build-arg API_BASE_URL=https://api.example.com -t fy-web .
