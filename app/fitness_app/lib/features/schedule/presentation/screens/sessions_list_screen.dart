@@ -3,17 +3,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_radii.dart';
 import '../../../../core/widgets/fy_card.dart';
 import '../../../../core/widgets/fy_info_banner.dart';
-import '../../../../core/widgets/fy_top_bar.dart';
-import '../../../../core/widgets/person_name_email.dart';
+import '../../../../core/widgets/fy_square_icon_button.dart';
+import '../../../../core/widgets/fy_status_chip.dart';
+import '../../../home/presentation/home_format.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../finance/data/finance_repository.dart';
 import '../../../finance/data/money_formatter.dart';
 import '../../../social/data/social_repository.dart';
 import '../../data/schedule_models.dart';
 import '../../data/schedule_repository.dart';
+import '../../domain/calendar_range.dart';
 import '../schedule_format.dart';
+import '../session_status.dart';
 import '../widgets/session_actions_sheet.dart';
 
 String sessionStatusLabel(String status) {
@@ -61,10 +65,12 @@ class _SessionsListScreenState extends State<SessionsListScreen>
   }
 
   List<TrainingSession> get _upcoming =>
-      _sessions.where((s) => s.status == 'booked').toList(growable: false);
+      _sessions.where((s) => s.status == 'booked').toList(growable: false)
+        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
 
   List<TrainingSession> get _archive =>
-      _sessions.where((s) => s.status != 'booked').toList(growable: false);
+      _sessions.where((s) => s.status != 'booked').toList(growable: false)
+        ..sort((a, b) => b.startsAt.compareTo(a.startsAt));
 
   Future<void> _load() async {
     setState(() {
@@ -120,77 +126,6 @@ class _SessionsListScreenState extends State<SessionsListScreen>
     }
   }
 
-  Future<void> _confirmCancel(TrainingSession session) async {
-    final noteController = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Отменить тренировку?'),
-        content: TextField(
-          controller: noteController,
-          decoration: const InputDecoration(
-            labelText: 'Комментарий (необязательно)',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Нет'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Отменить'),
-          ),
-        ],
-      ),
-    );
-    final note = noteController.text.trim();
-    noteController.dispose();
-    if (ok != true || !mounted) return;
-    await _runAction(
-      session.id,
-      () => context.read<ScheduleRepository>().cancelSession(
-        session.id,
-        note: note.isEmpty ? null : note,
-      ),
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Тренировка отменена, время снова свободно'),
-      ),
-    );
-  }
-
-  Future<void> _confirmNoShow(TrainingSession session) async {
-    final charge = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Отметить неявку'),
-        content: const Text('Списать стоимость тренировки?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Нет, без оплаты'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Да, начислить'),
-          ),
-        ],
-      ),
-    );
-    if (charge == null || !mounted) return;
-    await _runAction(
-      session.id,
-      () => context.read<ScheduleRepository>().markNoShow(
-        session.id,
-        charge: charge,
-      ),
-    );
-  }
-
   Future<void> _markPaid(TrainingSession session) async {
     var method = 'cash';
     final selected = await showDialog<String>(
@@ -237,103 +172,170 @@ class _SessionsListScreenState extends State<SessionsListScreen>
   Widget build(BuildContext context) {
     final user = context.watch<AuthCubit>().state.user;
     final isTrainer = user?.roles.contains('trainer') == true;
+    final isStudent = user?.roles.contains('student') == true;
+    final permissions = user?.permissions ?? const <String>[];
+
+    Widget list(List<TrainingSession> sessions, {required bool upcoming}) {
+      return _SessionsTabList(
+        sessions: sessions,
+        upcoming: upcoming,
+        emptyMessage: upcoming
+            ? 'Нет предстоящих тренировок.'
+            : 'История пуста — проведённые и отменённые появятся здесь.',
+        userId: user?.id,
+        busyId: _busyId,
+        header: upcoming && isStudent ? const _ProgramCard() : null,
+        canMarkPaid: (session) =>
+            user?.id == session.coachId &&
+            session.finance.canMarkPaid &&
+            permissions.contains('finance:mark_paid'),
+        canReview: (session) => _reviewEligibleSessionIds.contains(session.id),
+        onMarkPaid: _markPaid,
+        onReview: (session) => context
+            .push<bool>('/reviews/new?sessionId=${session.id}')
+            .then((saved) {
+              if (saved == true) _load();
+            }),
+        onRefresh: _load,
+      );
+    }
 
     return Scaffold(
-      appBar: FyTopBar(
-        title: 'Журнал тренировок',
-        // For a student this is the «Тренировки» tab root: no back arrow.
-        leading: isTrainer || context.canPop()
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/schedule');
-                  }
-                },
-              )
-            : null,
-        actions: [
-          IconButton(
-            onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: const [
-            Tab(key: Key('sessions-tab-upcoming'), text: 'Предстоящие'),
-            Tab(key: Key('sessions-tab-archive'), text: 'Архив'),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: Row(
+                children: [
+                  // For a student this is the «Тренировки» tab root.
+                  if (isTrainer || context.canPop()) ...[
+                    FySquareIconButton(
+                      buttonKey: const Key('sessions-back'),
+                      tooltip: 'Назад',
+                      icon: Icons.arrow_back_rounded,
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/schedule');
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Text(
+                      isTrainer ? 'Журнал тренировок' : 'Тренировки',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TabBar(
+                controller: _tabs,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelPadding: const EdgeInsets.only(right: 20),
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textSecondary,
+                labelStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+                indicatorColor: AppColors.primary,
+                indicatorSize: TabBarIndicatorSize.label,
+                dividerColor: AppColors.border,
+                tabs: const [
+                  Tab(key: Key('sessions-tab-upcoming'), text: 'Предстоящие'),
+                  Tab(key: Key('sessions-tab-archive'), text: 'История'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: FyCard(
+                        child: FyInfoBanner(
+                          message: 'Не удалось загрузить тренировки.',
+                          icon: Icons.sync_problem_rounded,
+                        ),
+                      ),
+                    )
+                  : TabBarView(
+                      controller: _tabs,
+                      children: [
+                        list(_upcoming, upcoming: true),
+                        list(_archive, upcoming: false),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? const Padding(
-              padding: EdgeInsets.all(24),
-              child: FyCard(
-                child: FyInfoBanner(
-                  message: 'Не удалось загрузить тренировки.',
-                  icon: Icons.sync_problem_rounded,
-                ),
-              ),
-            )
-          : TabBarView(
-              controller: _tabs,
+    );
+  }
+}
+
+/// Student shortcut to the program and progress hub.
+class _ProgramCard extends StatelessWidget {
+  const _ProgramCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FyCard(
+      key: const Key('sessions-open-hub'),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      onTap: () => context.push('/me/training'),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.sunken,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.track_changes_rounded,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SessionsTabList(
-                  sessions: _upcoming,
-                  emptyMessage: 'Нет предстоящих тренировок.',
-                  userId: user?.id,
-                  permissions: user?.permissions ?? const [],
-                  busyId: _busyId,
-                  reviewEligibleSessionIds: _reviewEligibleSessionIds,
-                  onComplete: (session) => _runAction(
-                    session.id,
-                    () => context.read<ScheduleRepository>().completeSession(
-                      session.id,
-                    ),
+                Text(
+                  'Программа и прогресс',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  onCancel: _confirmCancel,
-                  onNoShow: _confirmNoShow,
-                  onMarkPaid: _markPaid,
-                  onHistory: (session) =>
-                      context.push('/sessions/${session.id}/history'),
-                  onReview: (session) => context
-                      .push<bool>('/reviews/new?sessionId=${session.id}')
-                      .then((saved) {
-                        if (saved == true) _load();
-                      }),
                 ),
-                _SessionsTabList(
-                  sessions: _archive,
-                  emptyMessage:
-                      'Архив пуст — отменённые и завершённые появятся здесь.',
-                  userId: user?.id,
-                  permissions: user?.permissions ?? const [],
-                  busyId: _busyId,
-                  reviewEligibleSessionIds: _reviewEligibleSessionIds,
-                  onComplete: (session) => _runAction(
-                    session.id,
-                    () => context.read<ScheduleRepository>().completeSession(
-                      session.id,
-                    ),
-                  ),
-                  onCancel: _confirmCancel,
-                  onNoShow: _confirmNoShow,
-                  onMarkPaid: _markPaid,
-                  onHistory: (session) =>
-                      context.push('/sessions/${session.id}/history'),
-                  onReview: (session) => context
-                      .push<bool>('/reviews/new?sessionId=${session.id}')
-                      .then((saved) {
-                        if (saved == true) _load();
-                      }),
+                Text(
+                  'Планы от тренера и рост результатов',
+                  style: theme.textTheme.bodySmall,
                 ),
               ],
             ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textSecondary,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -341,241 +343,237 @@ class _SessionsListScreenState extends State<SessionsListScreen>
 class _SessionsTabList extends StatelessWidget {
   const _SessionsTabList({
     required this.sessions,
+    required this.upcoming,
     required this.emptyMessage,
     required this.userId,
-    required this.permissions,
     required this.busyId,
-    required this.reviewEligibleSessionIds,
-    required this.onComplete,
-    required this.onCancel,
-    required this.onNoShow,
+    required this.canMarkPaid,
+    required this.canReview,
     required this.onMarkPaid,
-    required this.onHistory,
     required this.onReview,
+    required this.onRefresh,
+    this.header,
   });
 
   final List<TrainingSession> sessions;
+  final bool upcoming;
   final String emptyMessage;
   final String? userId;
-  final List<String> permissions;
   final String? busyId;
-  final Set<String> reviewEligibleSessionIds;
-  final void Function(TrainingSession session) onComplete;
-  final void Function(TrainingSession session) onCancel;
-  final void Function(TrainingSession session) onNoShow;
+  final Widget? header;
+  final bool Function(TrainingSession session) canMarkPaid;
+  final bool Function(TrainingSession session) canReview;
   final void Function(TrainingSession session) onMarkPaid;
-  final void Function(TrainingSession session) onHistory;
   final void Function(TrainingSession session) onReview;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
+    final children = <Widget>[
+      if (header != null) ...[header!, const SizedBox(height: 8)],
+    ];
     if (sessions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: FyCard(
+      children.add(
+        FyCard(
           child: FyInfoBanner(
             message: emptyMessage,
             icon: Icons.event_note_outlined,
           ),
         ),
       );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      itemCount: sessions.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 14),
-      itemBuilder: (context, index) {
-        final session = sessions[index];
-        return _SessionCard(
-          session: session,
-          userId: userId,
-          permissions: permissions,
-          busy: busyId == session.id,
-          onComplete: () => onComplete(session),
-          onCancel: () => onCancel(session),
-          onNoShow: () => onNoShow(session),
-          onMarkPaid: () => onMarkPaid(session),
-          onHistory: () => onHistory(session),
-          canReview: reviewEligibleSessionIds.contains(session.id),
-          onReview: () => onReview(session),
+    } else {
+      String? lastSection;
+      for (final session in sessions) {
+        final section = upcoming
+            ? sessionListSection(
+                DateTime.parse(session.startsAt).toLocal(),
+                DateTime.now(),
+              )
+            : null;
+        if (section != null && section != lastSection) {
+          children.add(_SectionLabel(section));
+          lastSection = section;
+        }
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _SessionRow(
+              session: session,
+              userId: userId,
+              busy: busyId == session.id,
+              canMarkPaid: canMarkPaid(session),
+              canReview: canReview(session),
+              onMarkPaid: () => onMarkPaid(session),
+              onReview: () => onReview(session),
+            ),
+          ),
         );
-      },
+      }
+    }
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        children: children,
+      ),
     );
   }
 }
 
-class _SessionCard extends StatelessWidget {
-  const _SessionCard({
+/// Upcoming list sections: «Сегодня», «На этой неделе», «Позже».
+String sessionListSection(DateTime start, DateTime now) {
+  final today = calendarDateOnly(now);
+  final day = calendarDateOnly(start);
+  if (!day.isAfter(today)) return 'Сегодня';
+  final sunday = DateTime(
+    today.year,
+    today.month,
+    today.day + 7 - today.weekday,
+  );
+  if (!day.isAfter(sunday)) return 'На этой неделе';
+  return 'Позже';
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      child: Text(
+        text,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _SessionRow extends StatelessWidget {
+  const _SessionRow({
     required this.session,
     required this.userId,
-    required this.permissions,
     required this.busy,
-    required this.onComplete,
-    required this.onCancel,
-    required this.onNoShow,
-    required this.onMarkPaid,
-    required this.onHistory,
+    required this.canMarkPaid,
     required this.canReview,
+    required this.onMarkPaid,
     required this.onReview,
   });
 
   final TrainingSession session;
   final String? userId;
-  final List<String> permissions;
   final bool busy;
-  final VoidCallback onComplete;
-  final VoidCallback onCancel;
-  final VoidCallback onNoShow;
-  final VoidCallback onMarkPaid;
-  final VoidCallback onHistory;
+  final bool canMarkPaid;
   final bool canReview;
+  final VoidCallback onMarkPaid;
   final VoidCallback onReview;
 
   @override
   Widget build(BuildContext context) {
-    final start = DateTime.parse(session.startsAt);
-    final end = DateTime.parse(session.endsAt);
-    final viewerId = userId;
-    final isCoach = viewerId != null && viewerId == session.coachId;
-    final peerName = viewerId == null
-        ? personPrimaryLabel(
-            displayName: session.studentDisplayName ?? session.coachDisplayName,
-            email: session.studentEmail ?? session.coachEmail,
-          )
-        : session.peerPrimaryLabel(viewerId);
-    final peerEmail = viewerId == null
-        ? personEmailCaption(
-            displayName: session.studentDisplayName ?? session.coachDisplayName,
-            email: session.studentEmail ?? session.coachEmail,
-          )
-        : session.peerEmailCaption(viewerId);
-    final isParticipant =
-        viewerId != null &&
-        (viewerId == session.coachId || viewerId == session.studentId);
-    final booked = session.status == 'booked';
-
-    final canComplete =
-        booked && isCoach && permissions.contains('sessions:complete');
-    final canNoShow =
-        booked && isCoach && permissions.contains('sessions:mark_no_show');
-    final canCancel =
-        booked && isParticipant && permissions.contains('sessions:cancel');
-    final canHistory =
-        isParticipant && permissions.contains('sessions:read_history');
-    final canMarkPaid =
-        isCoach &&
-        session.finance.canMarkPaid &&
-        permissions.contains('finance:mark_paid');
+    final theme = Theme.of(context);
+    final start = DateTime.parse(session.startsAt).toLocal();
+    final viewerId = userId ?? '';
+    final peer = session.peerPrimaryLabel(viewerId);
+    final title = session.workoutTitle?.trim().isNotEmpty == true
+        ? session.workoutTitle!
+        : 'Тренировка';
+    final mode = session.mode == 'online' ? 'онлайн' : 'офлайн';
+    final (status, statusLabel) = sessionStatusChip(session.status);
+    final finance = _financeLabel(session);
 
     return FyCard(
+      key: Key('sessions-row-${session.id}'),
+      padding: const EdgeInsets.all(12),
       onTap: () => context.push('/sessions/${session.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DecoratedBox(
+              Container(
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: AppColors.mintSoft,
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.sunken,
+                  borderRadius: BorderRadius.circular(AppRadii.control),
                 ),
-                child: const SizedBox.square(
-                  dimension: 44,
-                  child: Icon(
-                    Icons.self_improvement_rounded,
-                    color: AppColors.primary,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      formatTime(start),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    Text(
+                      '${formatHomeWeekdayShort(start)} ${start.day}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${formatDateTime(start)} – ${formatTime(end)}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      sessionStatusLabel(session.status),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      peerName,
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (peerEmail != null) ...[
-                      const SizedBox(height: 1),
+                    Text(
+                      '$peer · $mode',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    if (finance != null)
                       Text(
-                        peerEmail,
+                        finance,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              FyStatusChip(status: status, label: statusLabel),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            _financeLabel(session),
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-          ),
           if (busy) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             const LinearProgressIndicator(),
-          ] else ...[
-            const SizedBox(height: 14),
+          ] else if (canMarkPaid || canReview) ...[
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (canComplete)
-                  FilledButton(
-                    onPressed: onComplete,
-                    child: const Text('Провести'),
-                  ),
-                if (canNoShow)
-                  OutlinedButton(
-                    onPressed: onNoShow,
-                    child: const Text('Неявка'),
-                  ),
-                if (canCancel)
-                  OutlinedButton(
-                    onPressed: onCancel,
-                    child: const Text('Отменить'),
-                  ),
                 if (canMarkPaid)
                   FilledButton.tonal(
+                    key: Key('sessions-mark-paid-${session.id}'),
                     onPressed: onMarkPaid,
                     child: const Text('Оплачено'),
                   ),
-                if (canHistory)
-                  TextButton(
-                    onPressed: onHistory,
-                    child: const Text('История'),
-                  ),
                 if (canReview)
                   FilledButton.tonal(
+                    key: Key('sessions-review-${session.id}'),
                     onPressed: onReview,
                     child: const Text('Оставить отзыв'),
                   ),
@@ -587,9 +585,10 @@ class _SessionCard extends StatelessWidget {
     );
   }
 
-  String _financeLabel(TrainingSession session) {
+  /// Money line, only when finance is tracked for this session.
+  String? _financeLabel(TrainingSession session) {
     final finance = session.finance;
-    if (!finance.isTracked) return 'Финансы: не учитывается';
+    if (!finance.isTracked) return null;
     final amount = MoneyFormatter.format(
       finance.amountMinor!,
       currency: finance.currency ?? 'RUB',
