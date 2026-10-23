@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import type { Server } from 'http';
 import type { AddressInfo } from 'net';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -73,7 +74,8 @@ describe('Чат тренер↔ученик (e2e)', () => {
       }),
     );
     await app.listen(0);
-    const address = app.getHttpServer().address() as AddressInfo;
+    const server = app.getHttpServer() as unknown as Server;
+    const address = server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${address.port}`;
     dataSource = app.get(DataSource);
 
