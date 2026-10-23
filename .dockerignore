@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/build
+**/.dart_tool
+.git
+.env
+web_app
+openspec
+docs
+app/fitness_app/ios
+app/fitness_app/android
+app/fitness_app/macos
+app/fitness_app/windows
+app/fitness_app/linux
