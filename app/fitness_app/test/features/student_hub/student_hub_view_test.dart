@@ -90,8 +90,8 @@ void main() {
     expect(cubit.state.series?.points, hasLength(2));
     expect(find.byKey(const Key('hub-person-header')), findsOneWidget);
     expect(find.byKey(const Key('hub-action-grid')), findsOneWidget);
-    expect(find.text('Ближайшие'), findsOneWidget);
-    expect(find.text('Назначенные'), findsOneWidget);
+    expect(find.text('БЛИЖАЙШИЕ'), findsOneWidget);
+    expect(find.text('НАЗНАЧЕННЫЕ'), findsOneWidget);
     expect(
       find.text(
         'Проведите занятие с весами, чтобы увидеть график',
@@ -129,7 +129,7 @@ void main() {
     expect(find.byKey(const Key('hub-progress-empty')), findsOneWidget);
   });
 
-  testWidgets('шапка показывает короткое имя и mint-инициалы', (tester) async {
+  testWidgets('шапка показывает имя и инициалы', (tester) async {
     final cubit = _MockHubCubit();
     const state = StudentHubState(
       status: StudentHubStatus.ready,
@@ -156,7 +156,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Алина К.'), findsOneWidget);
     expect(find.text('Алина Козлова'), findsOneWidget);
     expect(find.text('АК'), findsOneWidget);
     expect(find.byKey(const Key('hub-action-grid')), findsOneWidget);
