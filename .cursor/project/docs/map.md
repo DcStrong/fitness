@@ -8,7 +8,7 @@
 
 | Change | Зачем |
 |--------|--------|
-| — | нет |
+| `add-coach-student-chat` | Чат тренер↔ученик: WebSocket + REST, системные сообщения о занятиях |
 
 ## Домены API ↔ Flutter ↔ spec ↔ docs
 
@@ -50,6 +50,12 @@
 |-----|---------|-------|------|
 | `invitations` | `invitations` | `invitations-api`, `mobile-invitations`, `coach-student-link` | `docs/domain/invitations.md` |
 | `social` (routes `/profiles`) | `social` | `profile-privacy`, `trainer-discovery`, `trainer-portfolio`, `session-reviews`, `mobile-social`, `web-social` | `docs/domain/social-privacy.md` |
+
+### Чат
+
+| API | Flutter | Specs | Docs |
+|-----|---------|-------|------|
+| `chat` (routes `/chats`, socket.io `/chat`) | `chats` | `chat-api`, `mobile-chat` (в `openspec/changes/add-coach-student-chat`) | — |
 
 ### Web (Next)
 

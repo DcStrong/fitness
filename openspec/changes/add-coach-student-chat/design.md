@@ -79,7 +79,7 @@
 
 | system_type | Откуда | Текст в треде |
 |---|---|---|
-| `session_booked` | тренер записал ученика (`POST /sessions`) | «Записал на занятие» + карточка |
+| `session_booked` | тренер записал ученика (`POST /sessions`) | «Новое занятие» + карточка |
 | `session_cancelled` | `sessions/:id/cancel` | «Занятие отменено» + причина, если есть |
 | `session_rescheduled` | `recurring …/resolve type=reschedule` | «Занятие перенесено» + было/стало |
 | `occurrence_skipped` | `recurring …/resolve type=skip` | «Занятие пропущено» |

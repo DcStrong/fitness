@@ -66,7 +66,7 @@ String formatChatNextSession(DateTime value, {required DateTime now}) {
 }
 
 String chatSystemTitle(ChatMessage message) => switch (message.systemType) {
-  ChatSystemType.sessionBooked => 'Запись на занятие',
+  ChatSystemType.sessionBooked => 'Новое занятие',
   ChatSystemType.sessionCancelled => 'Занятие отменено',
   ChatSystemType.sessionRescheduled => 'Занятие перенесено',
   ChatSystemType.occurrenceSkipped => 'Занятие пропущено',

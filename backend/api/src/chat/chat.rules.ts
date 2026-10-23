@@ -6,7 +6,7 @@ export const CHAT_PAGE_DEFAULT_LIMIT = 50;
 export const CHAT_PAGE_MAX_LIMIT = 100;
 
 const SYSTEM_TITLES: Record<ChatSystemType, string> = {
-  session_booked: 'Записал на занятие',
+  session_booked: 'Новое занятие',
   session_cancelled: 'Занятие отменено',
   session_rescheduled: 'Занятие перенесено',
   occurrence_skipped: 'Занятие пропущено',
