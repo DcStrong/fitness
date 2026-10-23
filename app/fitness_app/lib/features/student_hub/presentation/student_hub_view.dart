@@ -3,11 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/widgets/fy_avatar.dart';
+import '../../../core/widgets/fy_bottom_sheet.dart';
+import '../../../core/widgets/fy_button.dart';
 import '../../../core/widgets/fy_card.dart';
 import '../../../core/widgets/fy_chip.dart';
 import '../../../core/widgets/fy_icon_badge.dart';
 import '../../../core/widgets/fy_info_banner.dart';
-import '../../../core/widgets/fy_top_bar.dart';
+import '../../../core/widgets/fy_square_icon_button.dart';
+import '../../../core/widgets/fy_status_chip.dart';
+import '../../more/presentation/more_page.dart';
 import '../../plans/data/plans_models.dart';
 import '../../schedule/data/schedule_models.dart';
 import '../../schedule/presentation/schedule_format.dart';
@@ -19,37 +24,7 @@ import 'cubit/student_hub_state.dart';
 import 'widgets/assign_to_student_sheet.dart';
 import 'widgets/progress_line_chart.dart';
 
-const _weekdayShort = ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const _monthsGenitive = [
-  '',
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-];
-const _monthsUpper = [
-  '',
-  'ЯНВ',
-  'ФЕВ',
-  'МАР',
-  'АПР',
-  'МАЯ',
-  'ИЮН',
-  'ИЮЛ',
-  'АВГ',
-  'СЕН',
-  'ОКТ',
-  'НОЯ',
-  'ДЕК',
-];
+const _weekdayShort = ['', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
 
 class StudentHubView extends StatelessWidget {
   const StudentHubView({super.key});
@@ -61,81 +36,88 @@ class StudentHubView extends StatelessWidget {
         final cubit = context.read<StudentHubCubit>();
         final displayName = _hubDisplayName(state);
         return Scaffold(
-          appBar: FyTopBar(
-            title: cubit.isSelf ? 'Мои тренировки' : _shortName(displayName),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(cubit.isTrainer ? '/session-packages' : '/home');
-                }
-              },
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _HubHeader(cubit: cubit, state: state),
+                Expanded(
+                  child: switch (state.status) {
+                    StudentHubStatus.initial || StudentHubStatus.loading =>
+                      const Center(child: CircularProgressIndicator()),
+                    StudentHubStatus.failure => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          state.errorMessage ?? 'Не удалось загрузить',
+                        ),
+                      ),
+                    ),
+                    StudentHubStatus.ready => RefreshIndicator(
+                      onRefresh: cubit.load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                        children: [
+                          _PersonHeader(
+                            name: displayName,
+                            package: state.package,
+                          ),
+                          if (cubit.isTrainer) ...[
+                            const SizedBox(height: 16),
+                            _ActionRow(
+                              studentId: cubit.studentId,
+                              onAssigned: cubit.load,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          _StatsRow(state: state),
+                          const SizedBox(height: 24),
+                          _SectionHeader(
+                            title: 'БЛИЖАЙШИЕ',
+                            actionLabel: cubit.isTrainer
+                                ? 'Смотреть все ›'
+                                : null,
+                            onAction: cubit.isTrainer
+                                ? () => context.go('/schedule')
+                                : null,
+                          ),
+                          _UpcomingSessions(sessions: state.upcoming),
+                          const SizedBox(height: 20),
+                          _SectionHeader(
+                            title: 'НАЗНАЧЕННЫЕ',
+                            actionLabel: cubit.isTrainer ? 'Назначить' : null,
+                            onAction: cubit.isTrainer
+                                ? () => _assign(
+                                    context,
+                                    cubit.studentId,
+                                    cubit.load,
+                                  )
+                                : null,
+                          ),
+                          if (state.assigned.isEmpty)
+                            const FyCard(
+                              child: FyInfoBanner(
+                                message: 'Пока нет назначенных тренировок.',
+                                icon: Icons.assignment_outlined,
+                              ),
+                            )
+                          else
+                            _AssignedWorkouts(
+                              plans: state.assigned,
+                              isTrainer: cubit.isTrainer,
+                            ),
+                          const SizedBox(height: 16),
+                          const _SectionHeader(title: 'ПРОГРЕСС'),
+                          _ProgressSection(state: state, cubit: cubit),
+                        ],
+                      ),
+                    ),
+                  },
+                ),
+              ],
             ),
           ),
-          body: switch (state.status) {
-            StudentHubStatus.initial || StudentHubStatus.loading =>
-              const Center(child: CircularProgressIndicator()),
-            StudentHubStatus.failure => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(state.errorMessage ?? 'Не удалось загрузить'),
-              ),
-            ),
-            StudentHubStatus.ready => RefreshIndicator(
-              onRefresh: cubit.load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                children: [
-                  _PersonHeader(
-                    name: displayName,
-                    package: state.package,
-                  ),
-                  if (cubit.isTrainer) ...[
-                    const SizedBox(height: 20),
-                    _ActionGrid(
-                      studentId: cubit.studentId,
-                      recurringBookingId: state.recurringBookingId,
-                      onAssigned: cubit.load,
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  _SectionHeader(
-                    title: 'Ближайшие',
-                    actionLabel: cubit.isTrainer ? 'Смотреть все ›' : null,
-                    onAction: cubit.isTrainer
-                        ? () => context.go('/schedule')
-                        : null,
-                  ),
-                  _UpcomingSessions(sessions: state.upcoming),
-                  const SizedBox(height: 20),
-                  _SectionHeader(
-                    title: 'Назначенные',
-                    actionLabel: cubit.isTrainer ? 'Назначить' : null,
-                    onAction: cubit.isTrainer
-                        ? () => _assign(context, cubit.studentId, cubit.load)
-                        : null,
-                  ),
-                  if (state.assigned.isEmpty)
-                    const FyCard(
-                      child: FyInfoBanner(
-                        message: 'Пока нет назначенных тренировок.',
-                        icon: Icons.assignment_outlined,
-                      ),
-                    )
-                  else
-                    _AssignedWorkouts(
-                      plans: state.assigned,
-                      isTrainer: cubit.isTrainer,
-                    ),
-                  const SizedBox(height: 16),
-                  const _SectionHeader(title: 'Прогресс'),
-                  _ProgressSection(state: state, cubit: cubit),
-                ],
-              ),
-            ),
-          },
         );
       },
     );
@@ -163,24 +145,82 @@ String _hubDisplayName(StudentHubState state) {
   return 'Ученик';
 }
 
-String _shortName(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2) {
-    final last = parts.last;
-    final initial = last.isEmpty ? '' : '${last.characters.first}.';
-    return '${parts.first} $initial'.trim();
+/// Back button, screen title for the student's own view, and the trainer's
+/// «more» menu.
+class _HubHeader extends StatelessWidget {
+  const _HubHeader({required this.cubit, required this.state});
+
+  final StudentHubCubit cubit;
+  final StudentHubState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Row(
+        children: [
+          FySquareIconButton(
+            buttonKey: const Key('hub-back'),
+            tooltip: 'Назад',
+            icon: Icons.arrow_back_rounded,
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(cubit.isTrainer ? '/session-packages' : '/home');
+              }
+            },
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: cubit.isSelf
+                ? Text(
+                    'Мои тренировки',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          if (cubit.isTrainer)
+            FySquareIconButton(
+              buttonKey: const Key('hub-more'),
+              tooltip: 'Ещё действия',
+              icon: Icons.more_horiz_rounded,
+              onPressed: () => _showMoreSheet(
+                context,
+                recurringBookingId: state.recurringBookingId,
+              ),
+            ),
+        ],
+      ),
+    );
   }
-  return name;
 }
 
-String _initials(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2) {
-    return '${parts.first.characters.first}${parts[1].characters.first}'
-        .toUpperCase();
-  }
-  if (name.isEmpty) return '?';
-  return name.characters.take(2).toString().toUpperCase();
+void _showMoreSheet(BuildContext context, {String? recurringBookingId}) {
+  showFyBottomSheet<void>(
+    context: context,
+    builder: (sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: MoreMenuGroup(
+        items: [
+          const MoreMenuItem(
+            icon: Icons.credit_card_outlined,
+            title: 'Абонемент',
+            route: '/session-packages',
+          ),
+          MoreMenuItem(
+            icon: Icons.fitness_center_outlined,
+            title: 'Программа',
+            route: recurringBookingId != null
+                ? '/schedule/recurring/$recurringBookingId/program'
+                : '/schedule/recurring/create',
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PersonHeader extends StatelessWidget {
@@ -191,24 +231,10 @@ class _PersonHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final packageLine = _packageBadge(package);
     return Row(
       key: const Key('hub-person-header'),
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        CircleAvatar(
-          radius: 32,
-          backgroundColor: AppColors.mintSoft,
-          foregroundColor: AppColors.primary,
-          child: Text(
-            _initials(name),
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 20,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
+        FyAvatar(displayName: name, size: 64),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -216,40 +242,21 @@ class _PersonHeader extends StatelessWidget {
             children: [
               Text(
                 name,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontSize: 24,
+                  height: 30 / 24,
                 ),
               ),
-              const SizedBox(height: 8),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.mintSoft,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.eco_outlined,
-                        size: 16,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          packageLine,
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              const SizedBox(height: 2),
+              Text(
+                _packageLine(package),
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 18 / 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
@@ -260,12 +267,93 @@ class _PersonHeader extends StatelessWidget {
   }
 }
 
-String _packageBadge(SessionPackage? package) {
+String _packageLine(SessionPackage? package) {
   if (package == null) return 'Нет активного пакета';
   if (!package.isActive) return package.remainingLabel;
   final n = package.remainingSessions;
   if (n == 1) return 'Осталась 1 тренировка';
   return 'Осталось $n тренировок';
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.state});
+
+  final StudentHubState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final package = state.package;
+    final packageValue = package == null || !package.isActive
+        ? '—'
+        : '${package.remainingSessions} из ${package.totalSessions}';
+    return Row(
+      key: const Key('hub-stats'),
+      children: [
+        Expanded(
+          child: _StatCard(label: 'Пакет', value: packageValue),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _StatCard(
+            label: 'Ближайших',
+            value: '${state.upcoming.length}',
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _StatCard(
+            label: 'Назначено',
+            value: '${state.assigned.length}',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return FyCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 16 / 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                height: 26 / 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _UpcomingSessions extends StatelessWidget {
@@ -303,9 +391,6 @@ class _UpcomingSessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final start = DateTime.parse(session.startsAt).toLocal();
-    final weekday = _weekdayShort[start.weekday];
-    final month = _monthsGenitive[start.month];
-    final monthUpper = _monthsUpper[start.month];
     final title = session.workoutTitle?.trim();
     final subtitle = (title == null || title.isEmpty)
         ? 'Персональная тренировка'
@@ -314,36 +399,38 @@ class _UpcomingSessionCard extends StatelessWidget {
     return FyCard(
       key: Key('hub-session-${session.id}'),
       onTap: () => context.push('/sessions/${session.id}'),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.mintSoft,
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.sunken,
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: SizedBox(
-              width: 56,
-              height: 64,
+            child: SizedBox.square(
+              dimension: 52,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${start.day}',
+                    formatTime(start),
                     style: const TextStyle(
+                      fontSize: 14,
+                      height: 18 / 14,
                       fontWeight: FontWeight.w800,
-                      fontSize: 20,
-                      color: AppColors.primary,
-                      height: 1,
+                      color: AppColors.textPrimary,
+                      fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
-                    monthUpper,
+                    '${_weekdayShort[start.weekday]} ${start.day}',
+                    maxLines: 1,
+                    softWrap: false,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w700,
                       fontSize: 11,
-                      color: AppColors.primary,
+                      height: 14 / 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textTertiary,
                     ),
                   ),
                 ],
@@ -356,170 +443,71 @@ class _UpcomingSessionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$weekday, ${start.day} $month в ${formatTime(start)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    height: 20 / 15,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.place_outlined,
-                      size: 14,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      place,
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+                Text(
+                  place,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 18 / 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
-          const FyIconBadge(
-            icon: Icons.calendar_today_rounded,
-            size: 40,
-            iconSize: 20,
-          ),
+          const SizedBox(width: 8),
+          const FyStatusChip(status: FyStatus.confirmed),
         ],
       ),
     );
   }
 }
 
-class _ActionGrid extends StatelessWidget {
-  const _ActionGrid({
-    required this.studentId,
-    required this.recurringBookingId,
-    required this.onAssigned,
-  });
+/// One filled button per screen: «Записать»; «Назначить» is outlined.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.studentId, required this.onAssigned});
 
   final String studentId;
-  final String? recurringBookingId;
   final Future<void> Function() onAssigned;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       key: const Key('hub-action-grid'),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _ActionCell(
-                key: const Key('hub-action-book'),
-                icon: Icons.event_available_outlined,
-                label: 'Записать',
-                onTap: () => context.push(
-                  '/schedule/book-for-student',
-                  extra: CoachBookPrefill(studentId: studentId),
-                ),
-              ),
+        Expanded(
+          child: FyButton.primary(
+            key: const Key('hub-action-book'),
+            label: 'Записать',
+            icon: Icons.add_rounded,
+            size: FyButtonSize.medium,
+            onPressed: () => context.push(
+              '/schedule/book-for-student',
+              extra: CoachBookPrefill(studentId: studentId),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ActionCell(
-                key: const Key('hub-action-assign'),
-                icon: Icons.assignment_outlined,
-                label: 'Назначить',
-                onTap: () => _assign(context, studentId, onAssigned),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _ActionCell(
-                key: const Key('hub-action-package'),
-                icon: Icons.credit_card_outlined,
-                label: 'Абонемент',
-                onTap: () => context.push('/session-packages'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ActionCell(
-                key: const Key('hub-action-program'),
-                icon: Icons.fitness_center_outlined,
-                label: 'Программа',
-                onTap: () {
-                  if (recurringBookingId != null) {
-                    context.push(
-                      '/schedule/recurring/$recurringBookingId/program',
-                    );
-                    return;
-                  }
-                  context.push('/schedule/recurring/create');
-                },
-              ),
-            ),
-          ],
+        const SizedBox(width: 8),
+        Expanded(
+          child: FyButton.secondary(
+            key: const Key('hub-action-assign'),
+            label: 'Назначить',
+            icon: Icons.assignment_outlined,
+            size: FyButtonSize.medium,
+            onPressed: () => _assign(context, studentId, onAssigned),
+          ),
         ),
       ],
-    );
-  }
-}
-
-class _ActionCell extends StatelessWidget {
-  const _ActionCell({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    super.key,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 108,
-      child: FyCard(
-        color: AppColors.actionFill,
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.actionShadow,
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppColors.primary, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -540,9 +528,13 @@ class _SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 18 / 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.26,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           if (actionLabel != null)
@@ -571,43 +563,55 @@ class _AssignedWorkouts extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (final plan in plans) ...[
+        for (final (index, plan) in plans.indexed) ...[
+          if (index > 0) const SizedBox(height: 10),
           FyCard(
             key: Key('hub-plan-${plan.id}'),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             onTap: isTrainer ? () => context.push('/plans/${plan.id}') : null,
             child: Row(
               children: [
                 const FyIconBadge(
                   icon: Icons.fitness_center_rounded,
-                  size: 52,
-                  iconSize: 26,
+                  size: 44,
+                  iconSize: 22,
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         plan.title,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 20 / 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
                         '${plan.exercises.length} упражнений',
-                        style: const TextStyle(color: AppColors.textMuted),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 18 / 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.primary,
-                ),
+                if (isTrainer)
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary,
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
         ],
       ],
     );
@@ -644,7 +648,8 @@ class _ProgressSection extends StatelessWidget {
                     selected: state.selectedExerciseId == exercise.exerciseId,
                     showCheckmark: false,
                     compact: true,
-                    onSelected: (_) => cubit.selectExercise(exercise.exerciseId),
+                    onSelected: (_) =>
+                        cubit.selectExercise(exercise.exerciseId),
                   ),
               ],
             ),
