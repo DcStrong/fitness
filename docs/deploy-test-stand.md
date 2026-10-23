@@ -21,7 +21,7 @@
    `curl -fsSL https://get.docker.com | sh`
    (если 1 ГБ ОЗУ: `fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile`)
 4. Скачайте проект: `git clone https://github.com/DcStrong/fitness.git && cd fitness`
-5. Создайте настройки: `cp deploy/.env.example .env && nano .env`. Впишите адреса из шага 2 и пароли (`openssl rand -hex 32` выдаёт случайную строку для каждого секрета). Заполните `ADMIN_EMAIL` и `ADMIN_PASSWORD`, если нужен админ. Файл `.env` никому не отправляйте.
+5. Создайте настройки: `cp deploy/.env.example .env && nano .env`. Впишите адреса из шага 2 и пароли: для `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` и `JWT_REFRESH_SECRET` придумайте разные случайные строки командой `openssl rand -hex 32` (подробнее про базу — раздел «База данных» ниже). У каждой переменной в файле есть комментарий. Заполните `ADMIN_EMAIL` и `ADMIN_PASSWORD`, если нужен админ. Файл `.env` никому не отправляйте.
 6. Запустите: `docker compose -f docker-compose.deploy.yml up -d --build` (первая сборка 10–20 минут).
    Миграции и начальные данные (`db:seed`) выполняются автоматически при старте API.
 7. Откройте `https://app.<ваш-адрес>` на телефоне. Войдите или зарегистрируйтесь и раздайте ссылку знакомым.
@@ -33,3 +33,12 @@
 - Если сертификат не выдался: проверьте, что порты 80 и 443 открыты у провайдера, а адреса из `.env` открываются.
 - Сделать сайт доступным только знакомым: на тестовом стенде CORS открыт для всех; для production его нужно сузить.
 - Веб-консоль тренера (`web_app`, Next.js) в стенд не входит, при необходимости добавим отдельным шагом.
+
+## База данных (Postgres)
+- **Ставить Postgres на сервер не нужно.** Он запускается сам в контейнере `postgres` из `docker-compose.deploy.yml` вместе с остальным (`up -d --build`). API подключается к нему по внутренней сети Docker; наружу порт базы не открыт.
+- **`POSTGRES_PASSWORD`** — пароль к этой базе, его придумываете вы сами. Сгенерировать: `openssl rand -hex 16` (получится строка из букв и цифр; спецсимволы вроде `@ : / #` не используйте, пароль входит в адрес подключения). Вписывать его больше никуда не надо, только в `.env`. Пользователь `postgres` и база `fitness_yoda` создаются автоматически.
+- **Не меняйте пароль после первого запуска.** Пароль записывается в базу только при её первом создании. Если поменять его в `.env` позже, API перестанет подключаться (в логах `password authentication failed`). Чтобы сменить, пересоздайте базу: `docker compose -f docker-compose.deploy.yml down -v`, поправьте `.env`, снова `up -d --build`. **Все данные при этом удалятся** (пользователи, записи, чаты; админ и начальные данные создаются заново автоматически).
+- **Где хранятся данные:** в Docker-томе `pgdata` на сервере (обычно `/var/lib/docker/volumes/<папка проекта>_pgdata`). Переживает перезапуск и `down`; удаляется только `down -v`.
+- **Бэкап:** `docker compose -f docker-compose.deploy.yml exec -T postgres pg_dump -U postgres fitness_yoda > backup.sql`
+- **Восстановить из бэкапа** (в запущенный стенд): `docker compose -f docker-compose.deploy.yml exec -T postgres psql -U postgres fitness_yoda < backup.sql` (лучше сначала сбросить базу, как ниже, иначе будут ошибки «уже существует»).
+- **Сбросить базу с нуля:** `docker compose -f docker-compose.deploy.yml down -v && docker compose -f docker-compose.deploy.yml up -d --build`. Миграции и начальные данные применятся заново. Заодно сотрутся и сертификаты Caddy (`caddy_data`), они выдадутся снова.
