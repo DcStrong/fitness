@@ -20,6 +20,7 @@ import { BookingRequestsModule } from './booking-requests/booking-requests.modul
 import { RecurringBookingsModule } from './recurring-bookings/recurring-bookings.module';
 import { SessionPackagesModule } from './session-packages/session-packages.module';
 import { WorkoutProgramsModule } from './workout-programs/workout-programs.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { WorkoutProgramsModule } from './workout-programs/workout-programs.modul
     RecurringBookingsModule,
     SessionPackagesModule,
     WorkoutProgramsModule,
+    ChatModule,
     HealthModule,
   ],
 })

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CalendarBookingService } from '../calendar/calendar-booking.service';
@@ -21,6 +22,7 @@ import { UserRepository } from '../database/repository/user.repository';
 import { horizonLocalRange } from '../schedules/util/fixed-grid.util';
 import { SessionLifecycleService } from '../sessions/session-lifecycle.service';
 import { WorkoutProgramsService } from '../workout-programs/workout-programs.service';
+import { ChatSystemMessageService } from '../chat/chat-system-message.service';
 import type { CreateRecurringBookingParams } from './interface/create-recurring-booking.params';
 import type { CreateRecurringBookingReturns } from './interface/create-recurring-booking.returns';
 import type { ResolveOccurrenceParams } from './interface/resolve-occurrence.params';
@@ -52,6 +54,7 @@ export class RecurringBookingsService {
     private readonly users: UserRepository,
     private readonly dataSource: DataSource,
     private readonly programs: WorkoutProgramsService,
+    @Optional() private readonly chat?: ChatSystemMessageService,
   ) {}
 
   async create(
@@ -227,6 +230,7 @@ export class RecurringBookingsService {
           sessionId: session.id,
           note: 'recurring_cancelled',
           releaseSlot: true,
+          silentChat: true,
         },
       );
     }
@@ -288,10 +292,52 @@ export class RecurringBookingsService {
       params.type === 'reschedule' ? (params.newLocalDate ?? null) : null;
     await this.overrides.save(row);
 
-    return this.sync({
+    const summary = await this.sync({
       coachId: params.coachId,
       recurringBookingId: booking.id,
     });
+    await this.postOccurrenceChat(booking, params);
+
+    return summary;
+  }
+
+  /**
+   * Tells the student about a moved or skipped occurrence once the series is
+   * re-synced, pointing at the new session when one was booked.
+   */
+  private async postOccurrenceChat(
+    booking: RecurringBookingEntity,
+    params: ResolveOccurrenceParams,
+  ): Promise<void> {
+    const chat = this.chat;
+    if (!chat) {
+      return;
+    }
+    const session =
+      params.type === 'reschedule'
+        ? await this.sessions.findByRecurringOccurrence(
+            booking.id,
+            params.localDate,
+          )
+        : null;
+    const delivery = await this.dataSource.transaction(manager =>
+      chat.post({
+        manager,
+        coachId: booking.coachId,
+        studentId: booking.studentId,
+        type:
+          params.type === 'reschedule'
+            ? 'session_rescheduled'
+            : 'occurrence_skipped',
+        payload: {
+          sessionId: session?.id ?? null,
+          startsAt: session?.startsAt.toISOString() ?? null,
+          endsAt: session?.endsAt.toISOString() ?? null,
+          localDate: params.localDate,
+        },
+      }),
+    );
+    chat.publish([delivery]);
   }
 
   private async runSync(

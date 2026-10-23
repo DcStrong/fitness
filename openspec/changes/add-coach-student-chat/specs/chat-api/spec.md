@@ -57,3 +57,14 @@ When a coach books a session for a student, a session is cancelled, a recurring 
 #### Scenario: Event transaction fails
 - **WHEN** the underlying session operation fails and rolls back
 - **THEN** no system message is stored
+
+### Requirement: Real-time delivery over WebSocket
+The system SHALL expose a socket.io namespace `/chat` that accepts connections authenticated by an access JWT carrying `chat:read_own`. Each connection MUST receive `message.created` events for every message stored in conversations the user participates in, and `conversation.read` events when a participant moves their read marker. Events MUST be emitted only after the storing transaction commits. Unauthenticated connections MUST be disconnected.
+
+#### Scenario: Counterpart receives a message live
+- **WHEN** a student sends a message while the coach has an open `/chat` connection
+- **THEN** the coach's connection receives `message.created` with that message and its conversation id
+
+#### Scenario: Connection without token
+- **WHEN** a client connects to `/chat` without a valid access token
+- **THEN** the server disconnects it and sends no events

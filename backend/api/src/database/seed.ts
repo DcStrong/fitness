@@ -104,6 +104,8 @@ const PERMISSIONS = [
   { code: 'reviews:read', description: 'Read social reviews' },
   { code: 'reviews:create_own', description: 'Create own session review' },
   { code: 'reviews:update_own', description: 'Update own session review' },
+  { code: 'chat:read_own', description: 'Read own coach–student chats' },
+  { code: 'chat:send_own', description: 'Send messages in own coach–student chats' },
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -148,6 +150,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'profiles:read_linked_contacts',
     'portfolio:manage_own',
     'reviews:read',
+    'chat:read_own',
+    'chat:send_own',
   ],
   student: [
     'users:read_self',
@@ -172,6 +176,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'reviews:read',
     'reviews:create_own',
     'reviews:update_own',
+    'chat:read_own',
+    'chat:send_own',
   ],
   admin: [
     'users:read_self',
@@ -223,6 +229,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'reviews:read',
     'reviews:create_own',
     'reviews:update_own',
+    'chat:read_own',
+    'chat:send_own',
   ],
 };
 

@@ -10,6 +10,8 @@ export interface TransitionSessionParams {
   /** When true and cancelling, set linked ScheduleSlot status to `open`. */
   releaseSlot?: boolean;
   logs?: SessionExerciseLogInput[];
+  /** When true, no chat system message is posted (bulk series cancel). */
+  silentChat?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export interface ApplyTransitionParams {
   /** When true and toStatus is cancelled, reopen the linked ScheduleSlot. */
   releaseSlot?: boolean;
   logs?: SessionExerciseLogInput[];
+  silentChat?: boolean;
 }
 
 /**

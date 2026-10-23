@@ -32,6 +32,10 @@ import { toSessionWorkouts } from './session-workout.mapper';
 import { getChargeLifecycleAction } from '../billing/session-charge-policy';
 import { applySessionPackageDebit } from '../session-packages/apply-session-package-debit';
 import { WorkoutProgramsService } from '../workout-programs/workout-programs.service';
+import {
+  type ChatDelivery,
+  ChatSystemMessageService,
+} from '../chat/chat-system-message.service';
 
 @Injectable()
 export class SessionLifecycleService {
@@ -43,6 +47,7 @@ export class SessionLifecycleService {
     private readonly setLogs: SessionSetLogRepository,
     private readonly workoutItems: SessionWorkoutItemRepository,
     @Optional() private readonly programs?: WorkoutProgramsService,
+    @Optional() private readonly chat?: ChatSystemMessageService,
   ) {}
 
   /**
@@ -85,6 +90,9 @@ export class SessionLifecycleService {
       // Cancel frees the calendar slot by default (trainer can rebook the hour).
       releaseSlot: params.releaseSlot ?? true,
       ...params.note !== undefined ? { note: params.note } : {},
+      ...params.silentChat !== undefined
+        ? { silentChat: params.silentChat }
+        : {},
     });
   }
 
@@ -145,6 +153,7 @@ export class SessionLifecycleService {
   private async applyTransition(
     params: ApplyTransitionParams,
   ): Promise<SessionReturns> {
+    const deliveries: ChatDelivery[] = [];
     const { saved, packageExhausted } = await this.dataSource.transaction(
       async manager => {
         const session = await manager.findOne(SessionEntity, {
@@ -236,6 +245,27 @@ export class SessionLifecycleService {
         });
         await manager.save(event);
 
+        if (
+          params.toStatus === 'cancelled' &&
+          params.silentChat !== true &&
+          this.chat
+        ) {
+          deliveries.push(
+            await this.chat.post({
+              manager,
+              coachId: session.coachId,
+              studentId: session.studentId,
+              type: 'session_cancelled',
+              payload: {
+                sessionId: session.id,
+                startsAt: session.startsAt.toISOString(),
+                endsAt: session.endsAt.toISOString(),
+                note: params.note ?? null,
+              },
+            }),
+          );
+        }
+
         const debit = await applySessionPackageDebit(manager, {
           coachId: session.coachId,
           studentId: session.studentId,
@@ -253,6 +283,7 @@ export class SessionLifecycleService {
       },
     );
 
+    this.chat?.publish(deliveries);
     const withPeople =
       await this.sessions.findByIdWithPeople(saved.id) ?? saved;
     if (saved.status === 'completed') {

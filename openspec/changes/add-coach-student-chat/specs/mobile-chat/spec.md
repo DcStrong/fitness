@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Trainer chat list
-The trainer «Чаты» tab SHALL list the trainer's conversations sorted by latest message, each row showing the student avatar and name, last message preview (prefixed «Вы:» for own messages), time, and an unread count badge when unread > 0. The list MUST support search by student name and refresh periodically while visible.
+The trainer «Чаты» tab SHALL list the trainer's conversations sorted by latest message, each row showing the student avatar and name, last message preview (prefixed «Вы:» for own messages), time, and an unread count badge when unread > 0. The list MUST support search by student name and update in real time from the chat WebSocket while visible.
 
 #### Scenario: New incoming message while list is open
 - **WHEN** a student sends a message while the trainer's chat list is visible
-- **THEN** within one polling interval the conversation moves to the top with an unread badge
+- **THEN** without manual refresh the conversation moves to the top with an unread badge
 
 ### Requirement: Conversation thread
 The thread screen SHALL show messages grouped by day with day dividers, own messages as filled primary bubbles on the right, the counterpart's as outlined bubbles on the left, and system messages as session cards with time tile and status chip. The composer MUST send optimistically and show a retry affordance on failure.

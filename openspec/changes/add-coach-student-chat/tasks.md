@@ -3,7 +3,8 @@
 - [ ] 1.1 Entity `ChatConversationEntity`, `ChatMessageEntity` + миграция (таблицы, UNIQUE, индексы)
 - [ ] 1.2 Права `chat:read_own`, `chat:send_own` в `constants.ts` и `seed.ts` (trainer, student)
 - [ ] 1.3 `ChatService`: list (с `q`), get-or-create по паре с проверкой связи, messages по курсору, send с идемпотентностью по `clientId`, read, unread-count
-- [ ] 1.4 `ChatController` + DTO + OpenAPI
+- [ ] 1.4 `ChatController` + DTO
+- [ ] 1.4a `ChatGateway` (socket.io `/chat`, JWT в handshake, комнаты `user:<id>`, события `message.created`, `conversation.read`)
 - [ ] 1.5 `ChatSystemMessageService.post(manager, …)` и вызовы из sessions (book, cancel), booking-requests (accept, alternate, reject), recurring-bookings (resolve)
 - [ ] 1.6 Unit-тесты сервиса (доступ, непрочитанные, курсоры, идемпотентность)
 - [ ] 1.7 e2e: чужой диалог 404, без связи 403, отправка/чтение/непрочитанные, по одному сценарию на каждый system_type
@@ -11,8 +12,9 @@
 ## 2. Flutter: данные
 
 - [ ] 2.1 `ChatsRepository` (dio) и модели
-- [ ] 2.2 `ChatListCubit` (polling 15 с при видимости, поиск)
-- [ ] 2.3 `ChatThreadCubit` (история, `after`-polling 4 с, оптимистичная отправка, retry, read с дебаунсом)
+- [ ] 2.1a `ChatRealtime` (socket_io_client, reconnect, поток событий)
+- [ ] 2.2 `ChatListCubit` (обновление по событиям сокета, поиск)
+- [ ] 2.3 `ChatThreadCubit` (история, новые по сокету, догрузка `after` на reconnect, оптимистичная отправка, retry, read с дебаунсом)
 - [ ] 2.4 Unread-count в shell + бейдж вкладки
 
 ## 3. Flutter: экраны по доскам

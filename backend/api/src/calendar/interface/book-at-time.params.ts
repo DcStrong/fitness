@@ -15,4 +15,6 @@ export interface BookAtTimeParams {
   priceMinor?: string;
   recurringBookingId?: string;
   recurringLocalDate?: string;
+  /** Post a `session_booked` chat message (coach booking a student directly). */
+  notifyChat?: boolean;
 }

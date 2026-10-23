@@ -49,6 +49,8 @@ export const PERMISSIONS = {
   REVIEWS_READ: 'reviews:read',
   REVIEWS_CREATE_OWN: 'reviews:create_own',
   REVIEWS_UPDATE_OWN: 'reviews:update_own',
+  CHAT_READ_OWN: 'chat:read_own',
+  CHAT_SEND_OWN: 'chat:send_own',
 } as const;
 
 export const ROLE_SLUGS = {
