@@ -13,4 +13,6 @@ export interface SessionPackageModel {
   archivedAt: Date | null;
   coachEmail?: string | null;
   studentEmail?: string | null;
+  coachDisplayName?: string | null;
+  studentDisplayName?: string | null;
 }

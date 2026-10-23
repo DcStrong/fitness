@@ -46,11 +46,17 @@ describe('Auth (e2e)', () => {
   it('register trainer → me → refresh → logout', async () => {
     const register = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email: trainerEmail, password, role: 'trainer' })
+      .send({
+        email: trainerEmail,
+        password,
+        role: 'trainer',
+        displayName: 'Анна Тренер',
+      })
       .expect(201);
 
     expect(register.body.accessToken).toBeDefined();
     expect(register.body.refreshToken).toBeDefined();
+    expect(register.body.user.displayName).toBe('Анна Тренер');
     expect(register.body.user.roles).toContain('trainer');
     expect(register.body.user.permissions).toContain('users:read_self');
 
@@ -60,6 +66,7 @@ describe('Auth (e2e)', () => {
       .expect(200);
 
     expect(me.body.email).toBe(trainerEmail);
+    expect(me.body.displayName).toBe('Анна Тренер');
 
     const refreshed = await request(app.getHttpServer())
       .post('/auth/refresh')

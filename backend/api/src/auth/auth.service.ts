@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { RefreshTokenRepository } from '../database/repository/refresh-token.repository';
 import { RoleRepository } from '../database/repository/role.repository';
+import { UserProfileRepository } from '../database/repository/user-profile.repository';
 import { UserRepository } from '../database/repository/user.repository';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -22,6 +23,7 @@ export class AuthService {
   constructor(
     private readonly users: UserRepository,
     private readonly roles: RoleRepository,
+    private readonly profiles: UserProfileRepository,
     private readonly refreshTokens: RefreshTokenRepository,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
@@ -44,6 +46,12 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const user = await this.users.createWithRole(email, passwordHash, role);
+
+    if (dto.displayName) {
+      await this.profiles.save(
+        this.profiles.create({ userId: user.id, displayName: dto.displayName }),
+      );
+    }
 
     return this.issueAuthForUser(user.id);
   }
@@ -145,6 +153,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
+    const profile = await this.profiles.findByUserId(userId);
 
     const roles = (user.roles ?? []).map(role => role.slug);
     const permissions = [
@@ -157,6 +166,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      displayName: profile?.displayName ?? null,
       roles,
       permissions,
     };

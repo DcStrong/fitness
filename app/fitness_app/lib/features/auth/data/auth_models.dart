@@ -4,6 +4,7 @@ class AuthUser extends Equatable {
   const AuthUser({
     required this.id,
     required this.email,
+    this.displayName,
     required this.roles,
     required this.permissions,
   });
@@ -12,6 +13,7 @@ class AuthUser extends Equatable {
     return AuthUser(
       id: json['id'] as String,
       email: json['email'] as String,
+      displayName: json['displayName'] as String?,
       roles: (json['roles'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
@@ -23,11 +25,12 @@ class AuthUser extends Equatable {
 
   final String id;
   final String email;
+  final String? displayName;
   final List<String> roles;
   final List<String> permissions;
 
   @override
-  List<Object?> get props => [id, email, roles, permissions];
+  List<Object?> get props => [id, email, displayName, roles, permissions];
 }
 
 class AuthSession extends Equatable {
