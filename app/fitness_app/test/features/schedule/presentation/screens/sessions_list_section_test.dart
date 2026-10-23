@@ -5,6 +5,10 @@ void main() {
   test('upcoming sessions are grouped by today, this week and later', () {
     final wednesday = DateTime(2026, 10, 21, 9);
     expect(
+      sessionListSection(DateTime(2026, 10, 20, 23), wednesday),
+      'Ждут отметки',
+    );
+    expect(
       sessionListSection(DateTime(2026, 10, 21, 18), wednesday),
       'Сегодня',
     );

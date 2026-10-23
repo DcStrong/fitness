@@ -532,7 +532,13 @@ class _SessionSummaryCard extends StatelessWidget {
           ),
           Row(
             children: [
-              FyAvatar(displayName: peer, size: 44),
+              FyAvatar(
+                displayName: isCoach
+                    ? session.studentDisplayName
+                    : session.coachDisplayName,
+                email: isCoach ? session.studentEmail : session.coachEmail,
+                size: 44,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

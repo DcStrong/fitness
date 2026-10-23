@@ -420,11 +420,13 @@ class _SessionsTabList extends StatelessWidget {
   }
 }
 
-/// Upcoming list sections: «Сегодня», «На этой неделе», «Позже».
+/// Upcoming list sections: «Ждут отметки» (past days, still booked),
+/// «Сегодня», «На этой неделе», «Позже».
 String sessionListSection(DateTime start, DateTime now) {
   final today = calendarDateOnly(now);
   final day = calendarDateOnly(start);
-  if (!day.isAfter(today)) return 'Сегодня';
+  if (day.isBefore(today)) return 'Ждут отметки';
+  if (day == today) return 'Сегодня';
   final sunday = DateTime(
     today.year,
     today.month,
@@ -482,8 +484,14 @@ class _SessionRow extends StatelessWidget {
         ? session.workoutTitle!
         : 'Тренировка';
     final mode = session.mode == 'online' ? 'онлайн' : 'офлайн';
-    final (status, statusLabel) = sessionStatusChip(session.status);
-    final finance = _financeLabel(session);
+    final overdue =
+        session.status == 'booked' &&
+        DateTime.parse(session.endsAt).isBefore(DateTime.now());
+    final (status, statusLabel) = overdue
+        ? (FyStatus.waiting, 'Нужна отметка')
+        : sessionStatusChip(session.status);
+    // Money is the coach's bookkeeping; the student sees the price on the card.
+    final finance = viewerId == session.coachId ? _financeLabel(session) : null;
 
     return FyCard(
       key: Key('sessions-row-${session.id}'),
@@ -596,8 +604,8 @@ class _SessionRow extends StatelessWidget {
     final status = switch (finance.status) {
       'paid' => 'оплачено',
       'cancelled' => 'отменено',
-      'pending' when finance.earnedAt != null => 'ожидает оплаты',
-      'pending' => 'оплата после тренировки',
+      'pending' when finance.earnedAt != null => 'ждёт оплаты',
+      'pending' => 'после занятия',
       _ => finance.status,
     };
     return '$amount · $status';
