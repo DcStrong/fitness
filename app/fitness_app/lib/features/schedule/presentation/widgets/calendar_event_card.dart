@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radii.dart';
 import '../../../../core/widgets/fy_status_chip.dart';
 import '../../domain/calendar_events.dart';
 import '../schedule_format.dart';
+import '../session_status.dart';
 
 /// DS v2 calendar card. Sessions and requests are white cards with a status
 /// chip; free time is a dashed, filled outline so it never reads as booked.
@@ -169,12 +170,7 @@ class _CardContent extends StatelessWidget {
   return switch (event.type) {
     CalendarEventType.availability => null,
     CalendarEventType.request => (FyStatus.waiting, 'Ждёт ответа'),
-    CalendarEventType.session => switch (event.sessionStatus) {
-      'completed' => (FyStatus.done, 'Проведено'),
-      'no_show' => (FyStatus.noShow, 'Не пришёл'),
-      'cancelled' => (FyStatus.cancelled, 'Отменено'),
-      _ => (FyStatus.confirmed, 'Записан'),
-    },
+    CalendarEventType.session => sessionStatusChip(event.sessionStatus),
   };
 }
 

@@ -152,30 +152,11 @@ class _HomeHeader extends StatelessWidget {
           ),
         ),
         if (showInvite)
-          Semantics(
-            button: true,
-            label: 'Пригласить ученика',
-            child: Material(
-              color: AppColors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadii.control),
-                side: const BorderSide(color: AppColors.border),
-              ),
-              child: InkWell(
-                key: const Key('home-qr-invite'),
-                customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.control),
-                ),
-                onTap: () => context.push('/invite'),
-                child: const SizedBox.square(
-                  dimension: 44,
-                  child: Icon(
-                    Icons.qr_code_2_rounded,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
+          FySquareIconButton(
+            buttonKey: const Key('home-qr-invite'),
+            tooltip: 'Пригласить ученика',
+            icon: Icons.qr_code_2_rounded,
+            onPressed: () => context.push('/invite'),
           ),
       ],
     );

@@ -15,5 +15,6 @@ export 'fy_motion.dart';
 export 'fy_primary_button.dart';
 export 'fy_search_select_field.dart';
 export 'fy_secondary_button.dart';
+export 'fy_square_icon_button.dart';
 export 'fy_status_chip.dart';
 export 'fy_top_bar.dart';

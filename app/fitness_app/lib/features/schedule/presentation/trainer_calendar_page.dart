@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_route_observer.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../app/theme/app_radii.dart';
 import '../../../core/widgets/fy_card.dart';
 import '../../../core/widgets/fy_info_banner.dart';
+import '../../../core/widgets/fy_square_icon_button.dart';
 import '../../booking_requests/data/booking_requests_repository.dart';
 import '../../booking_requests/presentation/trainer_inbox_page.dart';
 import '../data/recurring_booking_models.dart';
@@ -323,7 +323,7 @@ class _TrainerCalendarViewState extends State<_TrainerCalendarView>
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ),
-                  _HeaderIconButton(
+                  FySquareIconButton(
                     buttonKey: const Key('schedule-recurring-button'),
                     tooltip: 'Регулярные тренировки',
                     icon: Icons.event_repeat_rounded,
@@ -372,45 +372,6 @@ class _TrainerCalendarViewState extends State<_TrainerCalendarView>
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    required this.buttonKey,
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final Key buttonKey;
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadii.control),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        child: InkWell(
-          key: buttonKey,
-          customBorder: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.control),
-          ),
-          onTap: onPressed,
-          child: SizedBox.square(
-            dimension: 44,
-            child: Icon(icon, color: AppColors.textPrimary),
-          ),
         ),
       ),
     );
