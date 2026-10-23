@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CoachStudentLinkRepository } from '../database/repository/coach-student-link.repository';
+import { UserProfileRepository } from '../database/repository/user-profile.repository';
 import { SessionPackageRepository } from '../database/repository/session-package.repository';
 import { SessionPackageEntity } from '../database/entity/session-package.entity';
 import type {
@@ -24,6 +25,7 @@ export class SessionPackagesService {
     private readonly dataSource: DataSource,
     private readonly packages: SessionPackageRepository,
     private readonly links: CoachStudentLinkRepository,
+    private readonly profiles: UserProfileRepository,
   ) {}
 
   async create(
@@ -68,7 +70,7 @@ export class SessionPackagesService {
     if (!withPeople) {
       throw new NotFoundException('Session package not found after create');
     }
-    return this.toPublic(withPeople);
+    return await this.toPublic(withPeople);
   }
 
   async list(
@@ -78,7 +80,7 @@ export class SessionPackagesService {
     const result: SessionPackageReturns[] = [];
     for (const row of rows) {
       const refreshed = await this.applyLazyExpire(row);
-      result.push(this.toPublic(refreshed));
+      result.push(await this.toPublic(refreshed));
     }
     return result;
   }
@@ -95,7 +97,7 @@ export class SessionPackagesService {
       throw new ForbiddenException('Not a participant of this package');
     }
     const refreshed = await this.applyLazyExpire(pkg);
-    return this.toPublic(refreshed);
+    return await this.toPublic(refreshed);
   }
 
   async extend(
@@ -145,7 +147,7 @@ export class SessionPackagesService {
     if (!withPeople) {
       throw new NotFoundException('Session package not found after extend');
     }
-    return this.toPublic(withPeople);
+    return await this.toPublic(withPeople);
   }
 
   async archive(
@@ -156,12 +158,12 @@ export class SessionPackagesService {
       throw new NotFoundException('Session package not found');
     }
     if (pkg.status === 'archived') {
-      return this.toPublic(pkg);
+      return await this.toPublic(pkg);
     }
     pkg.status = 'archived';
     pkg.archivedAt = new Date();
     const saved = await this.packages.save(pkg);
-    return this.toPublic(saved);
+    return await this.toPublic(saved);
   }
 
   private async applyLazyExpire(
@@ -194,7 +196,14 @@ export class SessionPackagesService {
     }
   }
 
-  private toPublic(pkg: SessionPackageEntity): SessionPackageReturns {
+  private async toPublic(
+    pkg: SessionPackageEntity,
+  ): Promise<SessionPackageReturns> {
+    const profiles = await this.profiles.findByUserIds([
+      pkg.coachId,
+      pkg.studentId,
+    ]);
+    const nameById = new Map(profiles.map(p => [p.userId, p.displayName]));
     return {
       id: pkg.id,
       coachId: pkg.coachId,
@@ -208,6 +217,8 @@ export class SessionPackagesService {
       archivedAt: pkg.archivedAt?.toISOString() ?? null,
       coachEmail: pkg.coach?.email ?? null,
       studentEmail: pkg.student?.email ?? null,
+      coachDisplayName: nameById.get(pkg.coachId) ?? null,
+      studentDisplayName: nameById.get(pkg.studentId) ?? null,
     };
   }
 }

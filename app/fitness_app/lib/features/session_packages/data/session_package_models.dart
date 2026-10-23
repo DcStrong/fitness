@@ -18,6 +18,8 @@ class SessionPackage extends Equatable {
     this.archivedAt,
     this.coachEmail,
     this.studentEmail,
+    this.coachDisplayName,
+    this.studentDisplayName,
   });
 
   factory SessionPackage.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,8 @@ class SessionPackage extends Equatable {
       archivedAt: json['archivedAt'] as String?,
       coachEmail: json['coachEmail'] as String?,
       studentEmail: json['studentEmail'] as String?,
+      coachDisplayName: json['coachDisplayName'] as String?,
+      studentDisplayName: json['studentDisplayName'] as String?,
     );
   }
 
@@ -49,6 +53,8 @@ class SessionPackage extends Equatable {
   final String? archivedAt;
   final String? coachEmail;
   final String? studentEmail;
+  final String? coachDisplayName;
+  final String? studentDisplayName;
 
   bool get isActive => status == 'active';
   bool get isExhausted => status == 'exhausted';

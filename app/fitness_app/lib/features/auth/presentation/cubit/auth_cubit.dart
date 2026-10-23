@@ -63,6 +63,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String email,
     required String password,
     required String role,
+    required String displayName,
   }) async {
     emit(state.copyWith(isSubmitting: true, clearError: true));
     try {
@@ -70,6 +71,7 @@ class AuthCubit extends Cubit<AuthState> {
         email: email.trim(),
         password: password,
         role: role,
+        displayName: displayName.trim(),
       );
       emit(
         AuthState(
