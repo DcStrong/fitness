@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 
 Map<String, dynamic> socialJsonMap(dynamic value) {
@@ -110,12 +112,108 @@ class ProfilePrivacy extends Equatable {
   ];
 }
 
+class Gym extends Equatable {
+  const Gym({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.city,
+    this.district,
+  });
+
+  factory Gym.fromJson(Map<String, dynamic> json) => Gym(
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    address: json['address'] as String? ?? '',
+    city: json['city'] as String? ?? '',
+    district: json['district'] as String?,
+  );
+
+  final String id;
+  final String name;
+  final String address;
+  final String city;
+  final String? district;
+
+  /// Адрес с районом для подписей: «Район, Город, улица».
+  String get fullAddress => [
+    if (district?.isNotEmpty == true) district!,
+    city,
+    address,
+  ].where((part) => part.isNotEmpty).join(', ');
+
+  @override
+  List<Object?> get props => [id, name, address, city, district];
+}
+
+List<Gym> _gyms(dynamic value) => (value as List<dynamic>? ?? const [])
+    .map((item) => Gym.fromJson(socialJsonMap(item)))
+    .toList(growable: false);
+
+/// Файл, выбранный на устройстве и готовый к загрузке.
+class PickedImage extends Equatable {
+  const PickedImage({required this.name, required this.bytes, this.mimeType});
+
+  final String name;
+  final Uint8List bytes;
+  final String? mimeType;
+
+  int get size => bytes.length;
+
+  String? get extension {
+    final dot = name.lastIndexOf('.');
+    return dot < 0 ? null : name.substring(dot + 1).toLowerCase();
+  }
+
+  /// MIME для multipart: сообщённый платформой или по расширению.
+  String get contentType {
+    final reported = mimeType?.toLowerCase();
+    if (reported == 'image/jpeg' ||
+        reported == 'image/png' ||
+        reported == 'image/webp') {
+      return reported!;
+    }
+    return switch (extension) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
+  }
+
+  @override
+  List<Object?> get props => [name, bytes.length, mimeType];
+}
+
+/// Результат загрузки картинки в хранилище.
+class UploadedImage extends Equatable {
+  const UploadedImage({required this.url, this.size = 0});
+
+  factory UploadedImage.fromJson(Map<String, dynamic> json) => UploadedImage(
+    url: json['url'] as String? ?? '',
+    size: (json['size'] as num?)?.toInt() ?? 0,
+  );
+
+  final String url;
+  final int size;
+
+  @override
+  List<Object?> get props => [url, size];
+}
+
+/// `imageUrls` с запасом на старый ответ с одиночным `imageUrl`.
+List<String> _portfolioImages(Map<String, dynamic> json) {
+  final urls = _strings(json['imageUrls']);
+  if (urls.isNotEmpty) return urls;
+  final single = json['imageUrl'];
+  return single is String && single.isNotEmpty ? [single] : const [];
+}
+
 class PortfolioItem extends Equatable {
   const PortfolioItem({
     this.id,
     required this.title,
     this.description,
-    this.imageUrl,
+    this.imageUrls = const [],
     required this.sortOrder,
     this.createdAt,
     this.updatedAt,
@@ -125,7 +223,7 @@ class PortfolioItem extends Equatable {
     id: json['id'] as String?,
     title: json['title'] as String? ?? '',
     description: json['description'] as String?,
-    imageUrl: json['imageUrl'] as String?,
+    imageUrls: _portfolioImages(json),
     sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     createdAt: _date(json['createdAt']),
     updatedAt: _date(json['updatedAt']),
@@ -134,13 +232,16 @@ class PortfolioItem extends Equatable {
   final String? id;
   final String title;
   final String? description;
-  final String? imageUrl;
+  final List<String> imageUrls;
   final int sortOrder;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Первое фото — превью работы.
+  String? get imageUrl => imageUrls.firstOrNull;
+
   @override
-  List<Object?> get props => [id, title, description, imageUrl, sortOrder];
+  List<Object?> get props => [id, title, description, imageUrls, sortOrder];
 }
 
 class OwnerProfile extends Equatable {
@@ -158,6 +259,7 @@ class OwnerProfile extends Equatable {
     this.email = '',
     this.privacy = const ProfilePrivacy(),
     this.portfolio = const [],
+    this.gyms = const [],
     this.averageRating,
     this.reviewCount = 0,
     this.createdAt,
@@ -183,6 +285,7 @@ class OwnerProfile extends Equatable {
     portfolio: (json['portfolio'] as List<dynamic>? ?? const [])
         .map((item) => PortfolioItem.fromJson(socialJsonMap(item)))
         .toList(growable: false),
+    gyms: _gyms(json['gyms']),
     averageRating: (json['averageRating'] as num?)?.toDouble(),
     reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
     createdAt: _date(json['createdAt']),
@@ -202,10 +305,37 @@ class OwnerProfile extends Equatable {
   final String email;
   final ProfilePrivacy privacy;
   final List<PortfolioItem> portfolio;
+  final List<Gym> gyms;
   final double? averageRating;
   final int reviewCount;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  OwnerProfile copyWith({
+    List<PortfolioItem>? portfolio,
+    List<Gym>? gyms,
+    List<String>? trainingModes,
+    ProfilePrivacy? privacy,
+  }) => OwnerProfile(
+    userId: userId,
+    displayName: displayName,
+    avatarUrl: avatarUrl,
+    bio: bio,
+    city: city,
+    specialties: specialties,
+    trainingModes: trainingModes ?? this.trainingModes,
+    phone: phone,
+    telegramUsername: telegramUsername,
+    preferredContactChannels: preferredContactChannels,
+    email: email,
+    privacy: privacy ?? this.privacy,
+    portfolio: portfolio ?? this.portfolio,
+    gyms: gyms ?? this.gyms,
+    averageRating: averageRating,
+    reviewCount: reviewCount,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
 
   @override
   List<Object?> get props => [
@@ -222,6 +352,7 @@ class OwnerProfile extends Equatable {
     email,
     privacy,
     portfolio,
+    gyms,
     averageRating,
     reviewCount,
   ];
@@ -236,6 +367,7 @@ class PublicTrainer extends Equatable {
     this.city,
     this.specialties = const [],
     this.trainingModes = const [],
+    this.gyms = const [],
     this.averageRating,
     this.reviewCount,
     this.portfolio = const [],
@@ -250,6 +382,7 @@ class PublicTrainer extends Equatable {
     city: json['city'] as String?,
     specialties: _strings(json['specialties']),
     trainingModes: _strings(json['trainingModes']),
+    gyms: _gyms(json['gyms']),
     averageRating: (json['averageRating'] as num?)?.toDouble(),
     reviewCount: (json['reviewCount'] as num?)?.toInt(),
     portfolio: (json['portfolio'] as List<dynamic>? ?? const [])
@@ -265,10 +398,22 @@ class PublicTrainer extends Equatable {
   final String? city;
   final List<String> specialties;
   final List<String> trainingModes;
+  final List<Gym> gyms;
   final double? averageRating;
   final int? reviewCount;
   final List<PortfolioItem> portfolio;
   final bool? isLinked;
+
+  /// Город из профиля, а если он не заполнен — города залов.
+  String? get displayCity {
+    final own = city?.trim();
+    if (own != null && own.isNotEmpty) return own;
+    final cities = <String>{
+      for (final gym in gyms)
+        if (gym.city.isNotEmpty) gym.city,
+    };
+    return cities.isEmpty ? null : cities.join(', ');
+  }
 
   @override
   List<Object?> get props => [
@@ -279,6 +424,7 @@ class PublicTrainer extends Equatable {
     city,
     specialties,
     trainingModes,
+    gyms,
     averageRating,
     reviewCount,
     portfolio,

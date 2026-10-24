@@ -14,18 +14,13 @@ Future<Set<String>?> showTagSearchSheet(
   return showFyBottomSheet<Set<String>>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _TagSearchSheet(
-      tags: tags,
-      initialSelected: selectedIds,
-    ),
+    builder: (context) =>
+        _TagSearchSheet(tags: tags, initialSelected: selectedIds),
   );
 }
 
 class _TagSearchSheet extends StatefulWidget {
-  const _TagSearchSheet({
-    required this.tags,
-    required this.initialSelected,
-  });
+  const _TagSearchSheet({required this.tags, required this.initialSelected});
 
   final List<TagItem> tags;
   final Set<String> initialSelected;

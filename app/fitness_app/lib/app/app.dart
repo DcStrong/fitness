@@ -22,6 +22,7 @@ import '../features/chats/data/chat_realtime.dart';
 import '../features/chats/data/chats_repository.dart';
 import '../features/chats/presentation/cubit/chat_unread_cubit.dart';
 import 'router/app_router.dart';
+import 'router/invite_deep_links.dart';
 import 'theme/app_theme.dart';
 
 class FitnessApp extends StatefulWidget {
@@ -50,6 +51,7 @@ class _FitnessAppState extends State<FitnessApp> {
   late final ScheduleCalendarSync _scheduleCalendarSync;
   late final ValueNotifier<ThemeMode> _themeMode;
   late final GoRouter _router;
+  late final InviteDeepLinkListener _inviteDeepLinks;
 
   @override
   void initState() {
@@ -94,6 +96,7 @@ class _FitnessAppState extends State<FitnessApp> {
       _invitationsRepository,
       themeMode: _themeMode,
     );
+    _inviteDeepLinks = InviteDeepLinkListener(_router)..start();
     // The chat socket lives exactly as long as the signed-in session.
     _authSub = _authCubit.stream.listen(_syncChat);
     _syncChat(_authCubit.state);
@@ -111,6 +114,7 @@ class _FitnessAppState extends State<FitnessApp> {
   @override
   void dispose() {
     _authSub?.cancel();
+    _inviteDeepLinks.dispose();
     _chatUnreadCubit.close();
     _authCubit.close();
     _router.dispose();

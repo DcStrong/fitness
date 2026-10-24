@@ -9,7 +9,10 @@ import '../../../../core/widgets/fy_primary_button.dart';
 import '../../../schedule/presentation/schedule_format.dart';
 import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
+import '../widgets/portfolio_photos.dart';
 import '../widgets/safe_network_image.dart';
+import '../widgets/specialty_chips.dart';
+import '../widgets/trainer_gyms_list.dart';
 import '../../../../core/widgets/fy_top_bar.dart';
 
 class TrainerProfileScreen extends StatefulWidget {
@@ -111,7 +114,7 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
-                        if (trainer.city case final city?)
+                        if (trainer.displayCity case final city?)
                           Text(
                             city,
                             textAlign: TextAlign.center,
@@ -131,14 +134,20 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                         ],
                         if (trainer.specialties.isNotEmpty) ...[
                           const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
+                          SpecialtyChips(
+                            specialties: trainer.specialties,
                             alignment: WrapAlignment.center,
-                            children: trainer.specialties
-                                .map((item) => Chip(label: Text(item)))
-                                .toList(),
                           ),
+                        ],
+                        if (trainer.gyms.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            'Залы',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          TrainerGymsList(gyms: trainer.gyms),
                         ],
                         const SizedBox(height: 18),
                         if (trainer.isLinked == true)
@@ -179,15 +188,8 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (item.imageUrl != null) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SafeNetworkImage(
-                                    url: item.imageUrl,
-                                    height: 180,
-                                    icon: Icons.image_outlined,
-                                  ),
-                                ),
+                              if (item.imageUrls.isNotEmpty) ...[
+                                PortfolioPhotos(urls: item.imageUrls),
                                 const SizedBox(height: 12),
                               ],
                               Text(

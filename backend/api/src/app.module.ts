@@ -15,12 +15,14 @@ import { TagsModule } from './tags/tags.module';
 import { UsersModule } from './users/users.module';
 import { BillingModule } from './billing/billing.module';
 import { SocialModule } from './social/social.module';
+import { GymsModule } from './gyms/gyms.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BookingRequestsModule } from './booking-requests/booking-requests.module';
 import { RecurringBookingsModule } from './recurring-bookings/recurring-bookings.module';
 import { SessionPackagesModule } from './session-packages/session-packages.module';
 import { WorkoutProgramsModule } from './workout-programs/workout-programs.module';
 import { ChatModule } from './chat/chat.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -45,11 +47,13 @@ import { ChatModule } from './chat/chat.module';
     ExercisesModule,
     BillingModule,
     SocialModule,
+    GymsModule,
     BookingRequestsModule,
     RecurringBookingsModule,
     SessionPackagesModule,
     WorkoutProgramsModule,
     ChatModule,
+    MediaModule,
     HealthModule,
   ],
 })

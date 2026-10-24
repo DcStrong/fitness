@@ -47,6 +47,19 @@
 			</array>
 		</dict>
 	</dict>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.dcstrong.fitnessApp.invite</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fitnessyoda</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

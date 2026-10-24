@@ -13,11 +13,36 @@
 	@heavy path /canvaskit/* /assets/* /icons/*
 	header @heavy Cache-Control "public, max-age=604800"
 
-	try_files {path} /index.html
-	file_server
+	# Файлы верификации Universal Links / App Links (см. docs/deploy-test-stand.md, раздел про приглашения).
+	# Лежат отдельно от /srv; у apple-app-site-association нет расширения, поэтому Content-Type задан явно.
+	handle /.well-known/assetlinks.json {
+		root * /srv-well-known
+		header Content-Type application/json
+		header Cache-Control "no-cache"
+		file_server
+	}
+	handle /.well-known/apple-app-site-association {
+		root * /srv-well-known
+		header Content-Type application/json
+		header Cache-Control "no-cache"
+		file_server
+	}
+
+	# SPA fallback: /i/<token> и любые другие пути отдают index.html (в приложении path-стратегия URL).
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
 }
 
 {$API_HOST} {
+	# Публичное чтение картинок из MinIO: https://API_HOST/files/<bucket>/<key>.
+	handle_path /files/* {
+		reverse_proxy minio:9000
+	}
+
 	# WebSocket (чат, socket.io) проксируется автоматически.
-	reverse_proxy api:3001
+	handle {
+		reverse_proxy api:3001
+	}
 }

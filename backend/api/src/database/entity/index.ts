@@ -35,6 +35,8 @@ import { ChatConversationEntity } from './chat-conversation.entity';
 import { ChatMessageEntity } from './chat-message.entity';
 import { SessionReviewEntity } from './session-review.entity';
 import { TagEntity } from './tag.entity';
+import { GymEntity } from './gym.entity';
+import { TrainerGymEntity } from './trainer-gym.entity';
 import { TrainerPortfolioItemEntity } from './trainer-portfolio-item.entity';
 import { TrainingPlanEntity } from './training-plan.entity';
 import { TrainingPlanTagEntity } from './training-plan-tag.entity';
@@ -67,6 +69,8 @@ export const entities = [
   FinanceLedgerEntryEntity,
   UserProfileEntity,
   TrainerPortfolioItemEntity,
+  GymEntity,
+  TrainerGymEntity,
   SessionReviewEntity,
   BookingRequestEntity,
   BookingRequestEventEntity,
@@ -113,6 +117,8 @@ export {
   FinanceLedgerEntryEntity,
   UserProfileEntity,
   TrainerPortfolioItemEntity,
+  GymEntity,
+  TrainerGymEntity,
   SessionReviewEntity,
   BookingRequestEntity,
   BookingRequestEventEntity,

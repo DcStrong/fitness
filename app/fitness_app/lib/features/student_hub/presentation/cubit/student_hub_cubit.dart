@@ -168,7 +168,9 @@ class StudentHubCubit extends Cubit<StudentHubState> {
     if (!isTrainer) return current;
     try {
       final rels = await _invitations.listRelationships();
-      final match = rels.where((item) => item.studentId == studentId).firstOrNull;
+      final match = rels
+          .where((item) => item.studentId == studentId)
+          .firstOrNull;
       final name = match?.studentDisplayName?.trim();
       if (name != null && name.isNotEmpty) return name;
       final email = match?.studentEmail?.trim();

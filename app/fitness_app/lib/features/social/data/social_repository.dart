@@ -59,11 +59,11 @@ class SocialRepository {
   Future<PortfolioItem> createPortfolioItem({
     required String title,
     String? description,
-    String? imageUrl,
+    List<String> imageUrls = const [],
   }) => _request(
     () => _dio.post<dynamic>(
       '/profiles/me/portfolio',
-      data: _portfolioData(title, description, imageUrl),
+      data: _portfolioData(title, description, imageUrls),
     ),
     (data) => PortfolioItem.fromJson(_map(data)),
   );
@@ -72,11 +72,11 @@ class SocialRepository {
     required String id,
     required String title,
     String? description,
-    String? imageUrl,
+    List<String> imageUrls = const [],
   }) => _request(
     () => _dio.put<dynamic>(
       '/profiles/me/portfolio/$id',
-      data: _portfolioData(title, description, imageUrl),
+      data: _portfolioData(title, description, imageUrls),
     ),
     (data) => PortfolioItem.fromJson(_map(data)),
   );
@@ -103,10 +103,16 @@ class SocialRepository {
     String? query,
     String? specialty,
     String? mode,
+    String? gymId,
+    String? district,
+    String? gymQuery,
   }) => _request(
     () => _dio.get<dynamic>(
       '/trainers',
       queryParameters: {
+        if (gymId?.isNotEmpty == true) 'gymId': gymId,
+        if (district?.trim().isNotEmpty == true) 'district': district!.trim(),
+        if (gymQuery?.trim().isNotEmpty == true) 'gymQuery': gymQuery!.trim(),
         'page': page,
         'limit': limit.clamp(1, 50),
         if (query?.trim().isNotEmpty == true) 'query': query!.trim(),
@@ -190,6 +196,79 @@ class SocialRepository {
         (data) => ReviewPage.fromJson(_map(data)),
       );
 
+  /// Аватар: multipart-поле `file`, возвращает URL для `avatarUrl`.
+  Future<UploadedImage> uploadAvatar(PickedImage image) => _request(
+    () => _dio.post<dynamic>(
+      '/media/images',
+      data: FormData.fromMap({'file': _multipart(image)}),
+    ),
+    (data) => UploadedImage.fromJson(_map(data)),
+  );
+
+  /// Пакетная загрузка фото портфолио (поле `files`), порядок сохраняется.
+  Future<List<UploadedImage>> uploadPortfolioImages(List<PickedImage> images) =>
+      _request(
+        () => _dio.post<dynamic>(
+          '/media/portfolio-images',
+          data: FormData.fromMap({'files': images.map(_multipart).toList()}),
+          options: Options(
+            sendTimeout: const Duration(minutes: 2),
+            receiveTimeout: const Duration(minutes: 2),
+          ),
+        ),
+        (data) => _list(
+          _map(data)['items'],
+        ).map(UploadedImage.fromJson).toList(growable: false),
+      );
+
+  Future<List<Gym>> getOwnGyms() => _request(
+    () => _dio.get<dynamic>('/profiles/me/gyms'),
+    (data) => _list(data).map(Gym.fromJson).toList(growable: false),
+  );
+
+  /// Привязывает существующий зал ([gymId]) или создаёт новый по вводу.
+  Future<Gym> attachGym({
+    String? gymId,
+    String? name,
+    String? address,
+    String? city,
+    String? district,
+  }) => _request(
+    () => _dio.post<dynamic>(
+      '/profiles/me/gyms',
+      data: gymId != null
+          ? {'gymId': gymId}
+          : {
+              'name': name?.trim(),
+              'address': address?.trim(),
+              'city': city?.trim(),
+              'district': _nullable(district),
+            },
+    ),
+    (data) => Gym.fromJson(_map(data)),
+  );
+
+  Future<void> detachGym(String gymId) =>
+      _request(() => _dio.delete<dynamic>('/profiles/me/gyms/$gymId'), (_) {});
+
+  Future<List<Gym>> suggestGyms({String? query, String? city}) => _request(
+    () => _dio.get<dynamic>(
+      '/gyms/suggestions',
+      queryParameters: {
+        if (query?.trim().isNotEmpty == true) 'query': query!.trim(),
+        if (city?.trim().isNotEmpty == true) 'city': city!.trim(),
+        'limit': 8,
+      },
+    ),
+    (data) => _list(data).map(Gym.fromJson).toList(growable: false),
+  );
+
+  MultipartFile _multipart(PickedImage image) => MultipartFile.fromBytes(
+    image.bytes,
+    filename: image.name,
+    contentType: DioMediaType.parse(image.contentType),
+  );
+
   Future<OwnerProfile> _getProfile(String path) => _request(
     () => _dio.get<dynamic>(path),
     (data) => OwnerProfile.fromJson(_map(data)),
@@ -198,11 +277,11 @@ class SocialRepository {
   Map<String, dynamic> _portfolioData(
     String title,
     String? description,
-    String? imageUrl,
+    List<String> imageUrls,
   ) => {
     'title': title.trim(),
     'description': _nullable(description),
-    'imageUrl': _nullable(imageUrl),
+    'imageUrls': imageUrls,
   };
 
   String? _nullable(String? value) {
@@ -218,13 +297,25 @@ class SocialRepository {
       return parse((await call()).data);
     } on DioException catch (error) {
       final data = error.response?.data;
-      var message = 'Ошибка сети';
+      final offline =
+          error.response == null &&
+          (error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.type == DioExceptionType.receiveTimeout);
+      var message = offline ? 'Нет соединения с сервером' : 'Ошибка сети';
       if (data is Map && data['message'] is String) {
         message = data['message'] as String;
       } else if (data is Map && data['message'] is List) {
         message = (data['message'] as List).whereType<String>().join('\n');
       }
-      throw ApiException(message, statusCode: error.response?.statusCode);
+      throw ApiException(
+        message,
+        statusCode: error.response?.statusCode,
+        code: data is Map && data['code'] is String
+            ? data['code'] as String
+            : null,
+      );
     }
   }
 

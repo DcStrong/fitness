@@ -33,6 +33,8 @@ import '../../features/session_workout/presentation/session_workout_page.dart';
 import '../../features/schedule/presentation/screens/sessions_list_screen.dart';
 import '../../features/schedule/presentation/screens/student_book_screen.dart';
 import '../../features/student_hub/presentation/student_hub_page.dart';
+import '../../features/social/presentation/controller/unsaved_changes_guard.dart';
+import '../../features/social/presentation/screens/portfolio_editor_screen.dart';
 import '../../features/social/presentation/screens/reviews_screen.dart';
 import '../../features/social/presentation/screens/trainer_profile_screen.dart';
 import '../../features/social/presentation/screens/trainers_page.dart';
@@ -50,6 +52,10 @@ GoRouter createAppRouter(
   InvitationsRepository invitationsRepository, {
   required ValueNotifier<ThemeMode> themeMode,
 }) {
+  // Защита от потери несохранённых изменений в формах профиля и портфолио.
+  final profileGuard = UnsavedChangesGuard();
+  final portfolioGuard = UnsavedChangesGuard();
+
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: GoRouterRefreshStream(authCubit.stream),
@@ -58,15 +64,18 @@ GoRouter createAppRouter(
       final loc = state.matchedLocation;
       final isAuthRoute = loc == '/login' || loc == '/register';
       final isInviteAccept = loc == '/invite/accept';
+      final isInviteLink = loc.startsWith('/i/');
 
       if (status == AuthStatus.unknown) {
         return null;
       }
 
       if (status == AuthStatus.unauthenticated) {
-        if (isInviteAccept) {
+        if (isInviteAccept || isInviteLink) {
           final token = InviteLinks.extractToken(
-            state.uri.queryParameters['token'],
+            isInviteLink
+                ? state.uri.pathSegments.last
+                : state.uri.queryParameters['token'],
           );
           if (token != null) {
             await invitationsRepository.savePendingToken(token);
@@ -280,7 +289,10 @@ GoRouter createAppRouter(
                     builder: (context, state) {
                       final fromQuery = state.uri.queryParameters['token'];
                       final token = InviteLinks.extractToken(fromQuery);
-                      return InviteAcceptScreen(initialToken: token);
+                      return InviteAcceptScreen(
+                        initialToken: token,
+                        autoAccept: token != null,
+                      );
                     },
                   ),
                   GoRoute(
@@ -350,11 +362,33 @@ GoRouter createAppRouter(
                   ),
                   GoRoute(
                     path: '/profile',
-                    builder: (context, state) => const ProfileScreen(),
+                    builder: (context, state) =>
+                        ProfileScreen(guard: profileGuard),
+                    onExit: (context, state) =>
+                        profileGuard.confirmLeave(context),
                   ),
                   GoRoute(
                     path: '/profile/privacy',
-                    builder: (context, state) => const ProfileScreen(),
+                    builder: (context, state) =>
+                        ProfileScreen(guard: profileGuard),
+                    onExit: (context, state) =>
+                        profileGuard.confirmLeave(context),
+                  ),
+                  GoRoute(
+                    path: '/profile/portfolio/new',
+                    builder: (context, state) =>
+                        PortfolioEditorScreen(guard: portfolioGuard),
+                    onExit: (context, state) =>
+                        portfolioGuard.confirmLeave(context),
+                  ),
+                  GoRoute(
+                    path: '/profile/portfolio/:id',
+                    builder: (context, state) => PortfolioEditorScreen(
+                      itemId: state.pathParameters['id'],
+                      guard: portfolioGuard,
+                    ),
+                    onExit: (context, state) =>
+                        portfolioGuard.confirmLeave(context),
                   ),
                   GoRoute(
                     path: '/reviews',

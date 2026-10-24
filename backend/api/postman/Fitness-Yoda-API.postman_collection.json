@@ -67,6 +67,10 @@
       "value": ""
     },
     {
+      "key": "gymId",
+      "value": ""
+    },
+    {
       "key": "reviewId",
       "value": ""
     },
@@ -1182,7 +1186,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": { "raw": "{{baseUrl}}/trainers?page=1&limit=20&query=&specialty=&mode=online", "host": ["{{baseUrl}}"], "path": ["trainers"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }, { "key": "query", "value": "", "disabled": true }, { "key": "specialty", "value": "", "disabled": true }, { "key": "mode", "value": "online" }] }
+            "url": { "raw": "{{baseUrl}}/trainers?page=1&limit=20&query=&specialty=&mode=online&city=&gymId=&district=&gymQuery=", "host": ["{{baseUrl}}"], "path": ["trainers"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }, { "key": "query", "value": "", "disabled": true }, { "key": "specialty", "value": "", "disabled": true }, { "key": "mode", "value": "online" }, { "key": "city", "value": "", "disabled": true }, { "key": "gymId", "value": "", "disabled": true }, { "key": "district", "value": "", "disabled": true }, { "key": "gymQuery", "value": "", "disabled": true }] }
           }
         },
         {
@@ -1242,6 +1246,54 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": { "raw": "{{baseUrl}}/profiles/me/reviews?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["profiles", "me", "reviews"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gyms",
+      "item": [
+        {
+          "name": "List own gyms",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/profiles/me/gyms", "host": ["{{baseUrl}}"], "path": ["profiles", "me", "gyms"] }
+          }
+        },
+        {
+          "name": "Attach gym (new: name + address)",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('gymId', pm.response.json().id);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"World Class Невский\",\n  \"address\": \"Невский проспект, 100\",\n  \"city\": \"Санкт-Петербург\",\n  \"district\": \"Центральный\"\n}" },
+            "url": { "raw": "{{baseUrl}}/profiles/me/gyms", "host": ["{{baseUrl}}"], "path": ["profiles", "me", "gyms"] }
+          }
+        },
+        {
+          "name": "Attach gym (existing by gymId)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"gymId\": \"{{gymId}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/profiles/me/gyms", "host": ["{{baseUrl}}"], "path": ["profiles", "me", "gyms"] }
+          }
+        },
+        {
+          "name": "Detach gym",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/profiles/me/gyms/{{gymId}}", "host": ["{{baseUrl}}"], "path": ["profiles", "me", "gyms", "{{gymId}}"] }
+          }
+        },
+        {
+          "name": "Gym suggestions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/gyms/suggestions?query=world&limit=10", "host": ["{{baseUrl}}"], "path": ["gyms", "suggestions"], "query": [{ "key": "query", "value": "world" }, { "key": "city", "value": "", "disabled": true }, { "key": "limit", "value": "10" }] }
           }
         }
       ]

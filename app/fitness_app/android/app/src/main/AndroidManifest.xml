@@ -26,6 +26,24 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Ссылки приглашений обрабатывает пакет app_links, не встроенный deep linking Flutter. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
+            <!-- Android App Links: https://<хост стенда>/i/<token> открывает приложение, если домен
+                 верифицирован через /.well-known/assetlinks.json (см. docs/deploy-test-stand.md).
+                 Хост: замените на APP_HOST вашего стенда. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="app.149.154.64.173.sslip.io" android:pathPrefix="/i/"/>
+            </intent-filter>
+            <!-- Запасной вариант: fitnessyoda://invite/<token> -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="fitnessyoda" android:host="invite"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

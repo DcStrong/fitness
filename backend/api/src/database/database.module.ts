@@ -25,6 +25,8 @@ import { CoachFinanceSettingsRepository } from './repository/coach-finance-setti
 import { FinanceLedgerRepository } from './repository/finance-ledger.repository';
 import { SessionChargeRepository } from './repository/session-charge.repository';
 import { UserProfileRepository } from './repository/user-profile.repository';
+import { GymRepository } from './repository/gym.repository';
+import { TrainerGymRepository } from './repository/trainer-gym.repository';
 import { TrainerPortfolioRepository } from './repository/trainer-portfolio.repository';
 import { SessionReviewRepository } from './repository/session-review.repository';
 import { BookingRequestRepository } from './repository/booking-request.repository';
@@ -83,6 +85,8 @@ import { SessionWorkoutItemRepository } from './repository/session-workout-item.
     FinanceLedgerRepository,
     UserProfileRepository,
     TrainerPortfolioRepository,
+    GymRepository,
+    TrainerGymRepository,
     SessionReviewRepository,
     BookingRequestRepository,
     BookingRequestEventRepository,
@@ -122,6 +126,8 @@ import { SessionWorkoutItemRepository } from './repository/session-workout-item.
     FinanceLedgerRepository,
     UserProfileRepository,
     TrainerPortfolioRepository,
+    GymRepository,
+    TrainerGymRepository,
     SessionReviewRepository,
     BookingRequestRepository,
     BookingRequestEventRepository,

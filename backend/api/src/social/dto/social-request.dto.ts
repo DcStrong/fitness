@@ -9,13 +9,15 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
+import { IsMediaUrl } from '../../storage/validator/is-media-url.validator';
+import { MAX_PORTFOLIO_ITEMS } from '../social.constants';
 import type { PreferredContactChannel, TrainingMode } from '../interface';
 
 export class UpdateProfileDto {
@@ -25,7 +27,7 @@ export class UpdateProfileDto {
   displayName!: string;
 
   @IsOptional()
-  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsMediaUrl()
   @MaxLength(2048)
   avatarUrl?: string | null;
 
@@ -41,10 +43,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(10)
+  @ArrayMaxSize(8)
   @ArrayUnique()
   @IsString({ each: true })
-  @MaxLength(40, { each: true })
+  @MaxLength(30, { each: true })
   specialties?: string[];
 
   @IsOptional()
@@ -55,7 +57,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(24)
+  @Matches(/^\+7\d{10}$/u, { message: 'phone must use format +7XXXXXXXXXX' })
   phone?: string | null;
 
   @IsOptional()
@@ -111,7 +113,30 @@ export class TrainerDiscoveryQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['online', 'offline'])
   mode?: TrainingMode;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  city?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  gymId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  district?: string;
+
+  /** Подстрока названия или адреса зала. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  gymQuery?: string;
 }
+
+/** Грубая защита от огромных массивов; точный лимит проверяет сервис. */
+const MAX_DTO_PHOTOS = 50;
 
 export class SavePortfolioItemDto {
   @IsString()
@@ -124,15 +149,24 @@ export class SavePortfolioItemDto {
   @MaxLength(1000)
   description?: string | null;
 
+  /** Фото работы; не больше MAX_PHOTOS_PER_ITEM в записи (проверяется сервисом, код PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED). */
   @IsOptional()
-  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsArray()
+  @ArrayMaxSize(MAX_DTO_PHOTOS)
+  @IsMediaUrl({ each: true })
+  @MaxLength(2048, { each: true })
+  imageUrls?: string[];
+
+  /** Устаревшее одиночное фото; используется, только если `imageUrls` не передан. */
+  @IsOptional()
+  @IsMediaUrl()
   @MaxLength(2048)
   imageUrl?: string | null;
 }
 
 export class ReorderPortfolioDto {
   @IsArray()
-  @ArrayMaxSize(20)
+  @ArrayMaxSize(MAX_PORTFOLIO_ITEMS)
   @ArrayUnique()
   @IsUUID('4', { each: true })
   itemIds!: string[];

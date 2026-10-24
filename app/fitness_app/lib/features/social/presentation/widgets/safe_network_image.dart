@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class SafeNetworkImage extends StatelessWidget {
@@ -16,6 +17,15 @@ class SafeNetworkImage extends StatelessWidget {
   final BoxFit fit;
   final IconData icon;
 
+  /// HTTPS; в debug ещё и http с локальных хостов (MinIO при разработке).
+  static bool _isAllowed(Uri uri) {
+    if (uri.host.isEmpty) return false;
+    if (uri.scheme == 'https') return true;
+    return kDebugMode &&
+        uri.scheme == 'http' &&
+        const {'localhost', '127.0.0.1', '10.0.2.2'}.contains(uri.host);
+  }
+
   @override
   Widget build(BuildContext context) {
     final uri = Uri.tryParse(url ?? '');
@@ -29,7 +39,7 @@ class SafeNetworkImage extends StatelessWidget {
         ),
       ),
     );
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (uri == null || !_isAllowed(uri)) {
       return SizedBox(width: width, height: height, child: fallback);
     }
     return Image.network(

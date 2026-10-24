@@ -1,15 +1,8 @@
-/// Deep link placeholders for QR invitations (roadmap open question #2).
+/// Разбор ссылок приглашений ученика.
 ///
-/// HTTPS is encoded in QR by default (scanner-friendly).
-/// Custom scheme is for in-app / OS deep link handling.
+/// Ссылку формирует бэкенд (`inviteUrl` = `INVITE_HTTPS_BASE` + `/i/<token>`,
+/// `deepLink` = `fitnessyoda://invite/<token>`); клиент только извлекает токен.
 abstract final class InviteLinks {
-  static const httpsBase = 'https://app.fitness-yoda.local/i';
-  static const schemeBase = 'fitnessyoda://invite';
-
-  static String httpsUrl(String token) => '$httpsBase/$token';
-
-  static String deepLink(String token) => '$schemeBase/$token';
-
   /// Extracts token from HTTPS or custom-scheme invite URLs, or returns raw token.
   static String? extractToken(String? raw) {
     if (raw == null) {
