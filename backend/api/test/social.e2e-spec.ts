@@ -276,7 +276,7 @@ describe('Социальные профили и приватность (e2e)', 
       .set('Authorization', `Bearer ${studentToken}`)
       .send({
         displayName: 'Иван Ученик',
-        phone: '+7 (999) 123-45-67',
+        phone: '+79991234567',
         telegramUsername: '@ivan_fit',
         preferredContactChannels: ['phone', 'telegram'],
       })

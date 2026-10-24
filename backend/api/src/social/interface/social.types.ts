@@ -1,3 +1,5 @@
+import type { GymModel } from '../../gyms/interface';
+
 /**
  *
  */
@@ -57,6 +59,7 @@ export interface OwnerProfileModel {
   email: string;
   privacy: PrivacySettings;
   portfolio: PortfolioItemModel[];
+  gyms: GymModel[];
   averageRating: number | null;
   reviewCount: number;
   createdAt: Date | null;
@@ -85,6 +88,7 @@ export interface PublicTrainerSummary {
   city: string | null;
   specialties: string[];
   trainingModes: TrainingMode[];
+  gyms: GymModel[];
   averageRating?: number | null;
   reviewCount?: number;
 }

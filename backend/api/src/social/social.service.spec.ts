@@ -7,6 +7,7 @@ import {
 import { CoachStudentLinkRepository } from '../database/repository/coach-student-link.repository';
 import { SessionRepository } from '../database/repository/session.repository';
 import { SessionReviewRepository } from '../database/repository/session-review.repository';
+import { TrainerGymRepository } from '../database/repository/trainer-gym.repository';
 import { TrainerPortfolioRepository } from '../database/repository/trainer-portfolio.repository';
 import { UserProfileRepository } from '../database/repository/user-profile.repository';
 import { UserRepository } from '../database/repository/user.repository';
@@ -39,6 +40,10 @@ describe('Сервис социальных профилей', () => {
   const users = {
     findById: jest.fn(),
   };
+  const trainerGyms = {
+    findGymsByCoachId: jest.fn().mockResolvedValue([]),
+    findGymsByCoachIds: jest.fn().mockResolvedValue(new Map()),
+  };
 
   const service = new SocialService(
     profiles as unknown as UserProfileRepository,
@@ -47,6 +52,7 @@ describe('Сервис социальных профилей', () => {
     sessions as unknown as SessionRepository,
     links as unknown as CoachStudentLinkRepository,
     users as unknown as UserRepository,
+    trainerGyms as unknown as TrainerGymRepository,
   );
 
   beforeEach(() => {
@@ -78,6 +84,7 @@ describe('Сервис социальных профилей', () => {
         showReviewerName: false,
       },
       portfolio: [],
+      gyms: [],
       averageRating: null,
       reviewCount: 0,
       createdAt: null,
@@ -143,5 +150,132 @@ describe('Сервис социальных профилей', () => {
         { rating: 5 },
       ),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  describe('валидация профиля тренера', () => {
+    const trainer = { id: 'trainer-1', roles: ['trainer'] };
+    const base = { displayName: 'Иван Петров' };
+
+    beforeEach(() => {
+      profiles.findByUserId.mockResolvedValue(null);
+      profiles.create.mockImplementation((data: object) => ({ ...data }));
+      profiles.save.mockImplementation(async (entity: object) => entity);
+      users.findById.mockResolvedValue({ email: 'trainer@example.com' });
+      portfolio.findByCoachId.mockResolvedValue([]);
+      reviews.ratingForCoach.mockResolvedValue({
+        averageRating: null,
+        reviewCount: 0,
+      });
+    });
+
+    it('принимает российский телефон в формате +7XXXXXXXXXX', async () => {
+      await service.updateOwnProfile(trainer, {
+        ...base,
+        phone: '+7 (999) 123-45-67',
+      });
+
+      expect(profiles.save).toHaveBeenCalledWith(
+        expect.objectContaining({ phone: '+79991234567' }),
+      );
+    });
+
+    it.each(['+380991234567', '89991234567', '+7999123456'])(
+      'отклоняет телефон %s',
+      async phone => {
+        await expect(
+          service.updateOwnProfile(trainer, { ...base, phone }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      },
+    );
+
+    it('отклоняет более 8 специализаций', async () => {
+      const specialties = Array.from({ length: 9 }, (_, i) => `тег${i}`);
+
+      await expect(
+        service.updateOwnProfile(trainer, { ...base, specialties }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('отклоняет специализацию длиннее 30 символов', async () => {
+      await expect(
+        service.updateOwnProfile(trainer, {
+          ...base,
+          specialties: ['а'.repeat(31)],
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('принимает 8 специализаций по 30 символов', async () => {
+      const specialties = Array.from({ length: 8 }, (_, i) =>
+        `${i}`.padEnd(30, 'ф'));
+
+      await service.updateOwnProfile(trainer, { ...base, specialties });
+
+      expect(profiles.save).toHaveBeenCalledWith(
+        expect.objectContaining({ specialties }),
+      );
+    });
+  });
+
+  describe('залы в каталоге', () => {
+    it('отдаёт залы тренеров в карточках и передаёт фильтры', async () => {
+      profiles.listDiscoverable.mockResolvedValue({
+        items: [
+          {
+            profile: {
+              userId: 'trainer-1',
+              displayName: 'Иван',
+              avatarUrl: null,
+              bio: null,
+              city: 'Москва',
+              specialties: [],
+              trainingModes: ['offline'],
+              showRating: false,
+            },
+            averageRating: null,
+            reviewCount: 0,
+          },
+        ],
+        total: 1,
+      });
+      const gym = {
+        id: 'gym-1',
+        name: 'Зал',
+        address: 'ул. Ленина, 1',
+        city: 'Москва',
+        district: 'Центр',
+        dedupeKey: 'k',
+      };
+      trainerGyms.findGymsByCoachIds.mockResolvedValue(
+        new Map([['trainer-1', [gym]]]),
+      );
+
+      const page = await service.listTrainers({
+        page: 1,
+        limit: 20,
+        gymId: 'gym-1',
+        district: '  Центр ',
+        gymQuery: 'Ленина',
+        city: 'Москва',
+      });
+
+      expect(profiles.listDiscoverable).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gymId: 'gym-1',
+          district: 'Центр',
+          gymQuery: 'Ленина',
+          city: 'Москва',
+        }),
+      );
+      expect(page.items[0]?.gyms).toEqual([
+        {
+          id: 'gym-1',
+          name: 'Зал',
+          address: 'ул. Ленина, 1',
+          city: 'Москва',
+          district: 'Центр',
+        },
+      ]);
+    });
   });
 });

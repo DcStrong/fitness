@@ -1,3 +1,4 @@
+import { GymResponseDto } from '../../gyms/dto/gym-response.dto';
 import type {
   OwnerProfileModel,
   PortfolioItemModel,
@@ -77,6 +78,8 @@ export class OwnerProfileResponseDto {
 
   portfolio: PortfolioItemResponseDto[];
 
+  gyms: GymResponseDto[];
+
   averageRating: number | null;
 
   reviewCount: number;
@@ -102,6 +105,7 @@ export class OwnerProfileResponseDto {
       item => new PortfolioItemResponseDto(item),
     );
     this.averageRating = profile.averageRating;
+    this.gyms = profile.gyms.map(gym => new GymResponseDto(gym));
     this.reviewCount = profile.reviewCount;
     this.createdAt = profile.createdAt;
     this.updatedAt = profile.updatedAt;
@@ -123,6 +127,8 @@ export class PublicTrainerResponseDto {
 
   trainingModes: string[];
 
+  gyms: GymResponseDto[];
+
   averageRating?: number | null;
 
   reviewCount?: number;
@@ -139,6 +145,7 @@ export class PublicTrainerResponseDto {
     this.city = profile.city;
     this.specialties = profile.specialties;
     this.trainingModes = profile.trainingModes;
+    this.gyms = profile.gyms.map(gym => new GymResponseDto(gym));
     if (profile.averageRating !== undefined) {
       this.averageRating = profile.averageRating;
     }
