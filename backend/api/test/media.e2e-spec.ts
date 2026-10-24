@@ -136,6 +136,48 @@ describe('Загрузка изображений и лимит портфоли
     await put('http://evil.example.com/a.jpg').expect(400);
   });
 
+  describe('пакетная загрузка фото портфолио', () => {
+    const MB = 1024 * 1024;
+    const MAX_FILE = 5 * MB;
+    function sized(size: number): Buffer {
+      return Buffer.concat([JPEG, Buffer.alloc(size - JPEG.length)]);
+    }
+
+    function upload(token: string, buffers: Buffer[]): request.Test {
+      let req = request(app.getHttpServer())
+        .post('/media/portfolio-images')
+        .set('Authorization', `Bearer ${token}`);
+      for (const buffer of buffers) {
+        req = req.attach('files', buffer, { filename: 'p.jpg', contentType: 'image/jpeg' });
+      }
+
+      return req;
+    }
+
+    it('принимает большой и маленький файл', async () => {
+      const res = await upload(trainerToken, [sized(5 * MB), sized(1000)]).expect(201);
+      expect(res.body.items).toHaveLength(2);
+    });
+
+    it('принимает 5 файлов по 5 МБ', async () => {
+      const res = await upload(trainerToken, Array.from({ length: 5 }, () => sized(5 * MB))).expect(201);
+      expect(res.body.items).toHaveLength(5);
+    });
+
+    it('отклоняет 6 файлов', async () => {
+      await upload(trainerToken, Array.from({ length: 6 }, () => sized(1000))).expect(400);
+    });
+
+    it('отклоняет файл больше 5 МБ кодом IMAGE_TOO_LARGE', async () => {
+      const res = await upload(trainerToken, [sized(1000), sized(MAX_FILE + 100)]).expect(413);
+      expect(res.body.code).toBe('IMAGE_TOO_LARGE');
+    });
+
+    it('запрещает ученику', async () => {
+      await upload(studentToken, [sized(1000)]).expect(403);
+    });
+  });
+
   it('ограничивает портфолио пятью фото и возвращает PORTFOLIO_LIMIT_REACHED', async () => {
     function add(): request.Test {
       return request(app.getHttpServer())

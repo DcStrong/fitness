@@ -7,6 +7,8 @@
 - [x] 1.5 Unit-тесты: media service, валидатор URL, `requireEnv`, лимит портфолио
 - [x] 1.6 e2e `media.e2e-spec.ts`: загрузка, тип/размер/пустое поле, URL хранилища, лимит 5
 
+- [x] 1.7 Пакетная загрузка `POST /media/portfolio-images` (≤5 файлов, ≤5 МБ каждый, ≤25 МБ всего, с учётом свободных мест), константы в одном месте, unit и e2e
+
 ## 2. Инфраструктура
 
 - [x] 2.1 `minio` + `minio-init` + volume в `docker-compose.yml` и `docker-compose.deploy.yml`

@@ -32,3 +32,26 @@ Domain code SHALL depend on the `StoragePort` interface only; the S3/MinIO imple
 #### Scenario: Storage not configured
 - **WHEN** an upload is requested and `S3_*` variables are not set
 - **THEN** the system responds 503 with `code: STORAGE_NOT_CONFIGURED`
+
+### Requirement: Batch upload of portfolio photos
+The system SHALL accept up to 5 images in one `POST /media/portfolio-images` request (multipart field `files`) from a user with `portfolio:manage_own`. Each image MUST be at most 5 MB, the sum of all images MUST be at most 25 MB, and the number of files MUST NOT exceed the trainer's free portfolio slots (5 minus items already in the portfolio). All checks run before anything is stored. The avatar upload (`POST /media/images`) stays a single file of at most 5 MB.
+
+#### Scenario: Large and small file together
+- **WHEN** a trainer uploads one 5 MB and one 1 KB image
+- **THEN** the system responds 201 with `items` in file order
+
+#### Scenario: Five files of 5 MB
+- **WHEN** a trainer with an empty portfolio uploads 5 images of 5 MB each (25 MB total)
+- **THEN** the system responds 201 with 5 items
+
+#### Scenario: Sixth file
+- **WHEN** more than 5 files are sent, or more than the free portfolio slots
+- **THEN** the system rejects the request (400 for more than 5 files in one request, 409 `PORTFOLIO_LIMIT_REACHED` for exceeding free slots) and stores nothing
+
+#### Scenario: One file over 5 MB
+- **WHEN** any file exceeds 5 MB
+- **THEN** the system responds 413 with `code: IMAGE_TOO_LARGE` and stores nothing, including the other files
+
+#### Scenario: Total over 25 MB
+- **WHEN** the sum of file sizes exceeds 25 MB
+- **THEN** the system responds 413 with `code: IMAGES_TOTAL_TOO_LARGE` and stores nothing
