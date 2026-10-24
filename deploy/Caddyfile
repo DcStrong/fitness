@@ -18,6 +18,13 @@
 }
 
 {$API_HOST} {
+	# Публичное чтение картинок из MinIO: https://API_HOST/files/<bucket>/<key>.
+	handle_path /files/* {
+		reverse_proxy minio:9000
+	}
+
 	# WebSocket (чат, socket.io) проксируется автоматически.
-	reverse_proxy api:3001
+	handle {
+		reverse_proxy api:3001
+	}
 }

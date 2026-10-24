@@ -9,6 +9,7 @@
 | Change | Зачем |
 |--------|--------|
 | `add-coach-student-chat` | Чат тренер↔ученик: WebSocket + REST, системные сообщения о занятиях |
+| `add-media-upload` | Загрузка картинок (`POST /media/images`, MinIO), портфолио до 5 фото |
 
 ## Домены API ↔ Flutter ↔ spec ↔ docs
 
