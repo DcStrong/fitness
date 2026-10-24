@@ -235,7 +235,7 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(
-      find.byKey(const Key('home-bento-schedule'), skipOffstage: false),
+      find.byKey(const Key('home-bento-students'), skipOffstage: false),
       findsOneWidget,
     );
     completer.complete(const []);
