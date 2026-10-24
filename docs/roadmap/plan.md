@@ -111,6 +111,21 @@ OpenSpec: `social-privacy` → archived `2026-07-19-social-privacy`
 | `workout-program-and-progression` | Program on recurring + weight progression | ✅ archived `2026-08-21-workout-program-and-progression` |
 | `polish-student-hub-session-tags-ui` | Student hub / session / tags UI polish | ✅ archived `2026-08-23-polish-student-hub-session-tags-ui` |
 
+### Сделано в `dev` (ещё не в `main` и не на VDS)
+
+Ветки: `main` = то, что на VDS, `dev` = разработка и локальная проверка, см. [development-workflow.md](../development-workflow.md). Спеки ещё не архивированы.
+
+| Что | Change / источник | Статус |
+|-----|-------------------|--------|
+| Загрузка фото с устройства (аватар, портфолио): MinIO, WebP, до 5 записей портфолио и до 5 фото в каждой | `add-media-upload` | в dev; открыто: проверка compose-стенда с MinIO, архивация |
+| Залы тренера: название + адрес, поиск тренеров по залу/району/адресу, валидация телефона и специализаций | `add-trainer-gyms` | в dev; открыто: Postman-коллекция, домен gyms в docs, архивация |
+| Ссылки-приглашения на реальный домен, маршрут `/i/<token>`, deep link | `fix-invite-links` | в dev; открыто: проверка App Links / Universal Links на устройствах |
+| Профиль тренера: маска телефона, специализации чипами, экран портфолио, диалог о несохранённых изменениях | [trainer-profile-polish](../plans/trainer-profile-polish.md) | в dev |
+| Главная тренера: убрана мини-карточка расписания, ярлыки списком | правка без OpenSpec | в dev |
+| Процесс: ветки `main`/`dev`, локальный запуск с DevTools, обновление VDS | [development-workflow.md](../development-workflow.md) | в dev |
+
+Перед выкаткой на VDS: переменные `S3_*` и `INVITE_HTTPS_BASE` в `.env` сервера, `pg_dump`, при недоступном `quay.io` зеркало MinIO. Две новые миграции применяются при старте API.
+
 Источник статусов дизайн-долга: [docs/design/design-system-status.md](../design/design-system-status.md).  
 Домен слоёв A/B/C: [docs/design/availability-recurring-booking.md](../design/availability-recurring-booking.md).
 
