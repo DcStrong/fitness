@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Authenticated image upload
-The system SHALL accept an image via `POST /media/images` (multipart field `file`) from an authenticated user holding `profiles:update_own`, store it in the configured object storage, and return its public `url`, `contentType` and `size`.
+The system SHALL accept an image via `POST /media/images` (multipart field `file`) from an authenticated user holding `profiles:update_own`, store it in the configured object storage, and return its public `url`, `contentType` and `size`. Before storing, the system SHALL re-encode every image to WebP (EXIF orientation applied, all metadata including GPS dropped, fit within 512 px for avatars and 1600 px for portfolio photos, never enlarged), and the returned `contentType` is `image/webp` and `size` the stored size.
 
 #### Scenario: Valid image
 - **WHEN** an authenticated user uploads a JPEG, PNG or WebP of at most 5 MB
-- **THEN** the system responds 201 with a storage `url` under `images/<userId>/`
+- **THEN** the system responds 201 with a storage `url` ending in `.webp` under `images/<userId>/`
 
 #### Scenario: Unauthenticated upload
 - **WHEN** a request without a valid token is sent
@@ -55,3 +55,10 @@ The system SHALL accept up to 5 images in one `POST /media/portfolio-images` req
 #### Scenario: Total over 25 MB
 - **WHEN** the sum of file sizes exceeds 25 MB
 - **THEN** the system responds 413 with `code: IMAGES_TOTAL_TOO_LARGE` and stores nothing
+
+### Requirement: Undecodable images are rejected
+The system MUST reject an image that passes the signature check but cannot be decoded (or exceeds 50 megapixels) with 400 `code: IMAGE_CORRUPT` and store nothing.
+
+#### Scenario: Broken file
+- **WHEN** a file with a valid JPEG signature but corrupt content is uploaded
+- **THEN** the system responds 400 with `code: IMAGE_CORRUPT`

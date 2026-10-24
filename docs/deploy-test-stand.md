@@ -50,7 +50,7 @@
 - **`S3_SECRET_KEY`** — придумайте сами (`openssl rand -hex 16`, только буквы и цифры). Как и пароль Postgres, он записывается при первом создании `miniodata`; позже менять нельзя без сброса тома.
 - **Где данные:** Docker-том `miniodata` (`/var/lib/docker/volumes/<папка проекта>_miniodata`). Переживает перезапуск и `down`; удаляется `down -v`.
 - **Бэкап:** `docker run --rm -v <папка проекта>_miniodata:/data -v "$PWD":/backup alpine tar czf /backup/minio-backup.tgz -C /data .` (имя тома смотрите в `docker volume ls`). Восстановление — обратная распаковка в пустой том при остановленном `minio`. Делайте бэкап вместе с `pg_dump`: в базе лежат только ссылки.
-- **Лимиты:** до 5 МБ на файл, только JPEG/PNG/WebP (проверяется по содержимому); до 5 фото в портфолио тренера.
+- **Лимиты:** до 5 МБ на файл, только JPEG/PNG/WebP (проверяется по содержимому); при сохранении всё перекодируется в WebP (аватар до 512 px, фото портфолио до 1600 px, метаданные удаляются); до 5 фото в портфолио тренера.
 - **Локальная разработка:** `docker compose up -d` поднимает Postgres и MinIO (консоль http://localhost:9001, `minioadmin`/`minioadmin`). В `backend/api/.env` задайте: `S3_ENDPOINT=http://localhost:9000`, `S3_BUCKET=media`, `S3_ACCESS_KEY=minioadmin`, `S3_SECRET_KEY=minioadmin`, `S3_PUBLIC_URL=http://localhost:9000/media`. Без этих переменных API стартует, а загрузка вернёт 503 `STORAGE_NOT_CONFIGURED`.
 
 ## Производительность Flutter web

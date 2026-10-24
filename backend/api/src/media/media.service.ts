@@ -8,9 +8,16 @@ import {
 import { randomUUID } from 'crypto';
 import { TrainerPortfolioRepository } from '../database/repository/trainer-portfolio.repository';
 import { STORAGE, type StoragePort } from '../storage/interface';
-import { IMAGE_EXTENSIONS, sniffImageMime } from '../storage/util/image-type.util';
+import { sniffImageMime } from '../storage/util/image-type.util';
+import { processImageToWebp } from './helper/image-processor.helper';
 import type { UploadedImageModel, UploadImageParams, UploadPortfolioImagesParams } from './interface';
-import { MAX_IMAGE_BYTES, MAX_IMAGES_TOTAL_BYTES, MAX_PORTFOLIO_PHOTOS } from './media.constants';
+import {
+  AVATAR_IMAGE_MAX_SIDE,
+  MAX_IMAGE_BYTES,
+  MAX_IMAGES_TOTAL_BYTES,
+  MAX_PORTFOLIO_PHOTOS,
+  PORTFOLIO_IMAGE_MAX_SIDE,
+} from './media.constants';
 
 @Injectable()
 export class MediaService {
@@ -44,9 +51,13 @@ export class MediaService {
         message: `Total size must be at most ${MAX_IMAGES_TOTAL_BYTES} bytes`,
       });
     }
-    const checked = buffers.map(buffer => this.validate(buffer));
+    buffers.forEach(buffer => this.validate(buffer));
+    const processed: Buffer[] = [];
+    for (const buffer of buffers) {
+      processed.push(await processImageToWebp(buffer, PORTFOLIO_IMAGE_MAX_SIDE));
+    }
     const result: UploadedImageModel[] = [];
-    for (const item of checked) {
+    for (const item of processed) {
       result.push(await this.store(ownerId, item));
     }
 
@@ -54,17 +65,20 @@ export class MediaService {
   }
 
   /**
-   * Проверяет картинку по содержимому (jpeg/png/webp, до 5 МБ) и кладёт в хранилище
-   * под ключом `images/<ownerId>/<uuid>.<ext>`; имя файла клиента не используется.
+   * Аватар: проверка по содержимому (jpeg/png/webp, до 5 МБ), конвертация в WebP до 512 px
+   * и сохранение под ключом `images/<ownerId>/<uuid>.webp`; имя файла клиента не используется.
    */
   async uploadImage(params: UploadImageParams): Promise<UploadedImageModel> {
-    return this.store(params.ownerId, this.validate(params.buffer));
+    this.validate(params.buffer);
+    const webp = await processImageToWebp(params.buffer, AVATAR_IMAGE_MAX_SIDE);
+
+    return this.store(params.ownerId, webp);
   }
 
   /**
-   *
+   * Проверяет размер и тип по сигнатуре (не по заголовку клиента).
    */
-  private validate(buffer: Buffer): { buffer: Buffer; contentType: string; extension: string; } {
+  private validate(buffer: Buffer): void {
     if (buffer.length === 0) {
       throw new BadRequestException({ code: 'IMAGE_EMPTY', message: 'File is empty' });
     }
@@ -74,31 +88,25 @@ export class MediaService {
         message: `Image must be at most ${MAX_IMAGE_BYTES} bytes`,
       });
     }
-    const contentType = sniffImageMime(buffer);
-    const extension = contentType ? IMAGE_EXTENSIONS.get(contentType) : undefined;
-    if (!contentType || !extension) {
+    if (!sniffImageMime(buffer)) {
       throw new BadRequestException({
         code: 'IMAGE_UNSUPPORTED_TYPE',
         message: 'Only image/jpeg, image/png and image/webp are allowed',
       });
     }
-
-    return { buffer, contentType, extension };
   }
 
   /**
    *
    */
-  private async store(
-    ownerId: string,
-    image: { buffer: Buffer; contentType: string; extension: string; },
-  ): Promise<UploadedImageModel> {
+  private async store(ownerId: string, webp: Buffer): Promise<UploadedImageModel> {
+    const contentType = 'image/webp';
     const url = await this.storage.put({
-      key: `images/${ownerId}/${randomUUID()}.${image.extension}`,
-      body: image.buffer,
-      contentType: image.contentType,
+      key: `images/${ownerId}/${randomUUID()}.webp`,
+      body: webp,
+      contentType,
     });
 
-    return { url, contentType: image.contentType, size: image.buffer.length };
+    return { url, contentType, size: webp.length };
   }
 }

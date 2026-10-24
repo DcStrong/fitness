@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+import sharp from 'sharp';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
@@ -8,9 +9,10 @@ import { UserEntity } from '../src/database/entity/user.entity';
 import { STORAGE, type StoragePort } from '../src/storage/interface';
 
 const STORAGE_BASE = 'http://storage.test/media';
-const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64)]);
 
 describe('Загрузка изображений и лимит портфолио (e2e)', () => {
+  let JPEG: Buffer;
+  let SMALL: Buffer;
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let trainerToken: string;
@@ -21,15 +23,28 @@ describe('Загрузка изображений и лимит портфоли
   const studentEmail = `media-student-${suffix}@example.com`;
   const password = 'Password123';
   const fakeStorage: StoragePort = {
+    /**
+     *
+     */
     put: async ({ key, body }) => {
       stored.set(key, body);
 
       return `${STORAGE_BASE}/${key}`;
     },
+
+    /**
+     *
+     */
     isOwnUrl: url => url.startsWith(`${STORAGE_BASE}/`),
   };
 
   beforeAll(async () => {
+    JPEG = await sharp({ create: { width: 3000, height: 2000, channels: 3, background: '#336699' } })
+      .jpeg()
+      .toBuffer();
+    SMALL = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#336699' } })
+      .jpeg()
+      .toBuffer();
     process.env['S3_PUBLIC_URL'] = STORAGE_BASE;
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -76,11 +91,14 @@ describe('Загрузка изображений и лимит портфоли
       .attach('file', JPEG, { filename: '../../evil.php', contentType: 'image/jpeg' })
       .expect(201);
 
-    expect(res.body).toMatchObject({ contentType: 'image/jpeg', size: JPEG.length });
+    expect(res.body).toMatchObject({ contentType: 'image/webp' });
     expect(res.body.url as string).toMatch(
-      /^http:\/\/storage\.test\/media\/images\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/u,
+      /^http:\/\/storage\.test\/media\/images\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/u,
     );
     expect(stored.size).toBe(1);
+    const meta = await sharp(stored.values().next().value as Buffer).metadata();
+    expect(meta).toMatchObject({ format: 'webp', width: 512 });
+    expect(res.body.size).toBe((stored.values().next().value as Buffer).length);
   });
 
   it('разрешает загрузку ученику (аватар)', async () => {
@@ -107,7 +125,7 @@ describe('Загрузка изображений и лимит портфоли
     await request(app.getHttpServer())
       .post('/media/images')
       .set('Authorization', `Bearer ${trainerToken}`)
-      .attach('file', Buffer.concat([JPEG, Buffer.alloc(5 * 1024 * 1024)]), {
+      .attach('file', Buffer.concat([SMALL, Buffer.alloc(5 * 1024 * 1024)]), {
         filename: 'big.jpg',
         contentType: 'image/jpeg',
       })
@@ -124,6 +142,9 @@ describe('Загрузка изображений и лимит портфоли
   });
 
   it('принимает URL нашего хранилища и https, отклоняет чужой http', async () => {
+    /**
+     *
+     */
     function put(avatarUrl: string): request.Test {
       return request(app.getHttpServer())
         .put('/profiles/me')
@@ -139,10 +160,17 @@ describe('Загрузка изображений и лимит портфоли
   describe('пакетная загрузка фото портфолио', () => {
     const MB = 1024 * 1024;
     const MAX_FILE = 5 * MB;
+
+    /**
+     *
+     */
     function sized(size: number): Buffer {
-      return Buffer.concat([JPEG, Buffer.alloc(size - JPEG.length)]);
+      return Buffer.concat([SMALL, Buffer.alloc(size - SMALL.length)]);
     }
 
+    /**
+     *
+     */
     function upload(token: string, buffers: Buffer[]): request.Test {
       let req = request(app.getHttpServer())
         .post('/media/portfolio-images')
@@ -179,6 +207,9 @@ describe('Загрузка изображений и лимит портфоли
   });
 
   it('ограничивает портфолио пятью фото и возвращает PORTFOLIO_LIMIT_REACHED', async () => {
+    /**
+     *
+     */
     function add(): request.Test {
       return request(app.getHttpServer())
         .post('/profiles/me/portfolio')

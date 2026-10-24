@@ -15,6 +15,9 @@ export interface UploadImageParams {
   buffer: Buffer;
 }
 
+/**
+ *
+ */
 export interface UploadPortfolioImagesParams {
   ownerId: string;
   buffers: Buffer[];
