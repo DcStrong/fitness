@@ -4,7 +4,12 @@ import '../../data/social_models.dart';
 /// Лимиты совпадают с бэкендом (`backend/api/src/media/media.constants.ts`).
 const maxImageBytes = 5 * 1024 * 1024;
 const maxImagesTotalBytes = 25 * 1024 * 1024;
-const maxPortfolioPhotos = 5;
+
+/// Фото в одной записи портфолио (в каждой независимо).
+const maxPhotosPerItem = 5;
+
+/// Записей (работ) в портфолио тренера.
+const maxPortfolioItems = 5;
 
 const _allowedExtensions = {'jpg', 'jpeg', 'png', 'webp'};
 const _allowedMimeTypes = {'image/jpeg', 'image/png', 'image/webp'};
@@ -23,7 +28,7 @@ bool _isSupported(PickedImage image) {
 String? validateImages(List<PickedImage> images, {int maxCount = 1}) {
   if (images.isEmpty) return 'Выберите фото';
   if (maxCount <= 0) {
-    return 'Достигнут лимит: не больше $maxPortfolioPhotos фото в портфолио';
+    return 'Достигнут лимит: не больше $maxPhotosPerItem фото в одной работе';
   }
   if (images.length > maxCount) {
     return 'Можно добавить не больше $maxCount фото';
@@ -55,7 +60,9 @@ String uploadErrorMessage(Object error) {
       'IMAGE_EMPTY' => 'Файл пустой',
       'IMAGE_MISSING' => 'Выберите фото',
       'PORTFOLIO_LIMIT_REACHED' =>
-        'В портфолио уже максимум фото: не больше $maxPortfolioPhotos',
+        'Можно добавить не более $maxPortfolioItems работ',
+      'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED' =>
+        'В одной работе не больше $maxPhotosPerItem фото',
       _ when error.statusCode == 413 => 'Фото слишком большое',
       _ => error.message,
     };

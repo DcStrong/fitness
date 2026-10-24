@@ -311,10 +311,6 @@ class OwnerProfile extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  /// Сколько фото уже в портфолио (сумма по записям).
-  int get portfolioPhotoCount =>
-      portfolio.fold(0, (sum, item) => sum + item.imageUrls.length);
-
   OwnerProfile copyWith({
     List<PortfolioItem>? portfolio,
     List<Gym>? gyms,

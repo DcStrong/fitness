@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { QueryFailedError } from 'typeorm';
-import { MAX_PORTFOLIO_PHOTOS } from '../media/media.constants';
+import { MAX_PHOTOS_PER_ITEM } from '../media/media.constants';
 import { MAX_PORTFOLIO_ITEMS } from './social.constants';
 import { CoachStudentLinkRepository } from '../database/repository/coach-student-link.repository';
 import { SessionRepository } from '../database/repository/session.repository';
@@ -254,7 +254,7 @@ throw new NotFoundException('User not found');
       coachId: actor.id,
       title: this.requiredText(input.title, 'title'),
       description: this.optionalText(input.description, 'description'),
-      imageUrls: await this.resolveImageUrls(actor.id, input),
+      imageUrls: this.resolveImageUrls(input),
       sortOrder: count,
     });
 
@@ -273,7 +273,7 @@ throw new NotFoundException('User not found');
     const item = await this.ownedPortfolioItem(actor.id, itemId);
     item.title = this.requiredText(input.title, 'title');
     item.description = this.optionalText(input.description, 'description');
-    item.imageUrls = await this.resolveImageUrls(actor.id, input, item.id);
+    item.imageUrls = this.resolveImageUrls(input);
 
     return this.toPortfolio(await this.portfolio.save(item));
   }
@@ -636,20 +636,17 @@ return null;
   }
 
   /**
-   * Фото записи: `imageUrls` (или устаревший `imageUrl`); всего в портфолио не больше
-   * MAX_PORTFOLIO_PHOTOS фото, считая остальные записи.
+   * Фото записи: `imageUrls` (или устаревший `imageUrl`); в одной записи не больше
+   * MAX_PHOTOS_PER_ITEM фото, другие записи не учитываются.
    */
-  private async resolveImageUrls(
-    coachId: string,
+  private resolveImageUrls(
     input: { imageUrls?: string[]; imageUrl?: string | null; },
-    exceptItemId?: string,
-  ): Promise<string[]> {
+  ): string[] {
     const urls = input.imageUrls ?? (input.imageUrl ? [input.imageUrl] : []);
-    const others = await this.portfolio.countPhotosByCoachId(coachId, exceptItemId);
-    if (others + urls.length > MAX_PORTFOLIO_PHOTOS) {
+    if (urls.length > MAX_PHOTOS_PER_ITEM) {
       throw new ConflictException({
-        code: 'PORTFOLIO_LIMIT_REACHED',
-        message: `Portfolio is limited to ${MAX_PORTFOLIO_PHOTOS} photos in total`,
+        code: 'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED',
+        message: `A portfolio item holds at most ${MAX_PHOTOS_PER_ITEM} photos`,
       });
     }
 

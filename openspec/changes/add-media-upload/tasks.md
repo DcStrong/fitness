@@ -3,7 +3,7 @@
 - [x] 1.1 `requireEnv` (`common/util`), порт `StoragePort`, `S3StorageService`, `StorageModule`
 - [x] 1.2 `MediaModule`: `POST /media/images`, `MediaService` (сигнатура, 5 МБ, ключ), `UploadedImageResponseDto`
 - [x] 1.3 `@IsMediaUrl()` для `avatarUrl` / `imageUrl`; миграция `MediaUploadUrls`
-- [x] 1.4 Лимит портфолио 5 (`MAX_PORTFOLIO_ITEMS`), `PORTFOLIO_LIMIT_REACHED`, reorder ≤ 5
+- [x] 1.4 Лимиты портфолио: 5 записей (`MAX_PORTFOLIO_ITEMS`, `PORTFOLIO_LIMIT_REACHED`) и 5 фото в записи (`MAX_PHOTOS_PER_ITEM`, `PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED`), reorder ≤ 5
 - [x] 1.5 Unit-тесты: media service, валидатор URL, `requireEnv`, лимит портфолио
 - [x] 1.6 e2e `media.e2e-spec.ts`: загрузка, тип/размер/пустое поле, URL хранилища, лимит 5
 

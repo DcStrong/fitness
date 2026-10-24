@@ -56,7 +56,13 @@ void main() {
     test('maps backend codes', () {
       expect(
         uploadErrorMessage(ApiException('x', code: 'PORTFOLIO_LIMIT_REACHED')),
-        contains('максимум'),
+        'Можно добавить не более 5 работ',
+      );
+      expect(
+        uploadErrorMessage(
+          ApiException('x', code: 'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED'),
+        ),
+        'В одной работе не больше 5 фото',
       );
       expect(
         uploadErrorMessage(ApiException('x', code: 'IMAGE_TOO_LARGE')),

@@ -17,7 +17,6 @@ import {
   MinLength,
 } from 'class-validator';
 import { IsMediaUrl } from '../../storage/validator/is-media-url.validator';
-import { MAX_PORTFOLIO_PHOTOS } from '../../media/media.constants';
 import { MAX_PORTFOLIO_ITEMS } from '../social.constants';
 import type { PreferredContactChannel, TrainingMode } from '../interface';
 
@@ -136,6 +135,9 @@ export class TrainerDiscoveryQueryDto extends PaginationQueryDto {
   gymQuery?: string;
 }
 
+/** Грубая защита от огромных массивов; точный лимит проверяет сервис. */
+const MAX_DTO_PHOTOS = 50;
+
 export class SavePortfolioItemDto {
   @IsString()
   @IsNotEmpty()
@@ -147,10 +149,10 @@ export class SavePortfolioItemDto {
   @MaxLength(1000)
   description?: string | null;
 
-  /** Фото работы; всего в портфолио не больше MAX_PORTFOLIO_PHOTOS. */
+  /** Фото работы; не больше MAX_PHOTOS_PER_ITEM в записи (проверяется сервисом, код PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED). */
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(MAX_PORTFOLIO_PHOTOS)
+  @ArrayMaxSize(MAX_DTO_PHOTOS)
   @IsMediaUrl({ each: true })
   @MaxLength(2048, { each: true })
   imageUrls?: string[];

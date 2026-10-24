@@ -1,4 +1,2 @@
-import { MAX_PORTFOLIO_PHOTOS } from '../media/media.constants';
-
-/** Максимум записей в портфолио тренера; фото считаются отдельно (MAX_PORTFOLIO_PHOTOS на всё портфолио). */
-export const MAX_PORTFOLIO_ITEMS = MAX_PORTFOLIO_PHOTOS;
+/** Максимум записей (работ) в портфолио тренера; фото в каждой записи считаются отдельно (MAX_PHOTOS_PER_ITEM). */
+export const MAX_PORTFOLIO_ITEMS = 5;

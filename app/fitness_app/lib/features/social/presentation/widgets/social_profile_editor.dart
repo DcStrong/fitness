@@ -584,8 +584,10 @@ class _PortfolioEditor extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Добавить работу',
-            onPressed: profile.portfolio.length >= maxPortfolioPhotos
+            tooltip: profile.portfolio.length >= maxPortfolioItems
+                ? 'Можно добавить не более $maxPortfolioItems работ'
+                : 'Добавить работу',
+            onPressed: profile.portfolio.length >= maxPortfolioItems
                 ? null
                 : () => _edit(context),
             icon: const Icon(Icons.add_circle_outline_rounded),
@@ -595,7 +597,8 @@ class _PortfolioEditor extends StatelessWidget {
       if (profile.portfolio.isEmpty)
         const FyCard(
           child: FyInfoBanner(
-            message: 'Добавьте до $maxPortfolioPhotos фото в портфолио.',
+            message:
+                'Добавьте до $maxPortfolioItems работ, в каждой до $maxPhotosPerItem фото.',
             icon: Icons.collections_outlined,
           ),
         )

@@ -41,12 +41,12 @@ The system SHALL accept up to 5 images in one `POST /media/portfolio-images` req
 - **THEN** the system responds 201 with `items` in file order
 
 #### Scenario: Five files of 5 MB
-- **WHEN** a trainer with an empty portfolio uploads 5 images of 5 MB each (25 MB total)
+- **WHEN** a trainer uploads 5 images of 5 MB each (25 MB total)
 - **THEN** the system responds 201 with 5 items
 
 #### Scenario: Sixth file
-- **WHEN** more than 5 files are sent, or more than the free portfolio slots
-- **THEN** the system rejects the request (400 for more than 5 files in one request, 409 `PORTFOLIO_LIMIT_REACHED` for exceeding free slots) and stores nothing
+- **WHEN** more than 5 files are sent in one request (one portfolio item holds at most 5 photos; other items do not matter)
+- **THEN** the system rejects the request (400 from the upload interceptor for more than 5 files, 409 `PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED` at the service level) and stores nothing
 
 #### Scenario: One file over 5 MB
 - **WHEN** any file exceeds 5 MB

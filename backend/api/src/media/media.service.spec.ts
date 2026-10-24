@@ -1,5 +1,4 @@
-import { BadRequestException, ConflictException, PayloadTooLargeException } from '@nestjs/common';
-import type { TrainerPortfolioRepository } from '../database/repository/trainer-portfolio.repository';
+import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
 import type { StoragePort } from '../storage/interface';
 import { MAX_IMAGE_BYTES, MAX_IMAGES_TOTAL_BYTES } from './media.constants';
 import { MediaService } from './media.service';
@@ -17,15 +16,10 @@ describe('MediaService', () => {
     put: jest.fn(async ({ key }: { key: string; }) => `https://cdn.test/${key}`),
     isOwnUrl: jest.fn(),
   };
-  const portfolio = { countPhotosByCoachId: jest.fn() };
-  const service = new MediaService(
-    storage as unknown as StoragePort,
-    portfolio as unknown as TrainerPortfolioRepository,
-  );
+  const service = new MediaService(storage as unknown as StoragePort);
 
   beforeEach(() => {
     jest.clearAllMocks();
-    portfolio.countPhotosByCoachId.mockResolvedValue(0);
   });
 
   it.each([
@@ -93,16 +87,8 @@ describe('MediaService', () => {
     it('отклоняет 6 файлов', async () => {
       await expect(
         service.uploadPortfolioImages({ ownerId: 'u', buffers: Array.from({ length: 6 }, () => JPEG) }),
-      ).rejects.toMatchObject({ response: { code: 'PORTFOLIO_LIMIT_REACHED' } });
+      ).rejects.toMatchObject({ response: { code: 'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED' } });
       expect(storage.put).not.toHaveBeenCalled();
-    });
-
-    it('учитывает уже имеющиеся фото портфолио', async () => {
-      portfolio.countPhotosByCoachId.mockResolvedValue(4);
-
-      await expect(
-        service.uploadPortfolioImages({ ownerId: 'u', buffers: [JPEG, JPEG] }),
-      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('отклоняет файл больше 5 МБ кодом IMAGE_TOO_LARGE и ничего не сохраняет', async () => {
@@ -110,16 +96,6 @@ describe('MediaService', () => {
         service.uploadPortfolioImages({ ownerId: 'u', buffers: [JPEG, sized(MAX_IMAGE_BYTES + 1)] }),
       ).rejects.toMatchObject({ response: { code: 'IMAGE_TOO_LARGE' } });
       expect(storage.put).not.toHaveBeenCalled();
-    });
-
-    it('отклоняет сумму больше 25 МБ кодом IMAGES_TOTAL_TOO_LARGE', async () => {
-      // число файлов обходим моком свободных мест, чтобы сработала именно проверка суммы
-      portfolio.countPhotosByCoachId.mockResolvedValue(-1);
-      const buffers = Array.from({ length: 6 }, () => sized(MAX_IMAGE_BYTES));
-
-      await expect(
-        service.uploadPortfolioImages({ ownerId: 'u', buffers }),
-      ).rejects.toMatchObject({ response: { code: 'IMAGES_TOTAL_TOO_LARGE' } });
     });
   });
 });

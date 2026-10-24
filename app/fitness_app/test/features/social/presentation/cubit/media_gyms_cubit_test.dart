@@ -169,7 +169,7 @@ void main() {
           isA<PhotoPickException>().having(
             (e) => e.message,
             'message',
-            contains('максимум'),
+            contains('не более 5 работ'),
           ),
         ),
       );

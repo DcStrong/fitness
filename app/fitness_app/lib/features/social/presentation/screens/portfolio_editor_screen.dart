@@ -14,7 +14,7 @@ import '../widgets/portfolio_photo_picker.dart';
 import '../widgets/safe_network_image.dart';
 
 /// Экран создания/редактирования работы портфолио: одна запись — название,
-/// описание и до 5 фото (лимит 5 фото считается по всему портфолио).
+/// описание и до 5 фото (лимит на каждую работу независимый).
 /// Закрывается с `true`, если работа сохранена.
 class PortfolioEditorScreen extends StatefulWidget {
   const PortfolioEditorScreen({
@@ -42,17 +42,15 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _uploading = false;
-  int _otherPhotos = 0;
   String _baseline = '';
   String? _error;
   late final UnsavedChangesGuard _guard = widget.guard ?? UnsavedChangesGuard();
 
   bool get _isNew => widget.itemId == null;
 
-  /// Сколько фото ещё можно добавить: лимит считается по сумме фото всего
-  /// портфолио (в других записях уже [_otherPhotos]).
-  int get _freeSlots => (maxPortfolioPhotos - _otherPhotos - _photos.length)
-      .clamp(0, maxPortfolioPhotos);
+  /// Сколько фото ещё можно добавить в эту работу (в каждой работе — до 5).
+  int get _freeSlots =>
+      (maxPhotosPerItem - _photos.length).clamp(0, maxPhotosPerItem);
 
   @override
   void initState() {
@@ -91,9 +89,6 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
     });
     try {
       final profile = await context.read<SocialRepository>().getOwnProfile();
-      _otherPhotos = profile.portfolio
-          .where((entry) => entry.id != widget.itemId)
-          .fold(0, (sum, entry) => sum + entry.imageUrls.length);
       final item = _isNew
           ? null
           : profile.portfolio
@@ -226,14 +221,14 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                   children: [
                     Text(
-                      'Фото (${_photos.length}, можно ещё $_freeSlots)',
+                      'Фото: ${_photos.length} из $maxPhotosPerItem',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Лимит 5 фото на всё портфолио. JPEG, PNG или WebP, '
+                      'До 5 фото в одной работе. JPEG, PNG или WebP, '
                       'до 5 МБ каждое, до 25 МБ за раз.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textMuted,

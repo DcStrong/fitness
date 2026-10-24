@@ -7,7 +7,7 @@
 - Новый модуль `media`: `POST /media/images` (multipart, поле `file`) для аватара и фото портфолио; JPEG/PNG/WebP, до 5 МБ, тип по сигнатуре файла, ключ `images/<userId>/<uuid>.<ext>`, ответ `{ url, contentType, size }`.
 - Порт `StoragePort` (`put`, `isOwnUrl`) и реализация `S3StorageService` (MinIO/S3 через `@aws-sdk/client-s3`, конфиг `S3_*` через `requireEnv`, читается лениво).
 - `avatarUrl` / `imageUrl`: допустимы URL нашего хранилища (в dev — http) и любые внешние https-ссылки (обратная совместимость, существующие данные не трогаем).
-- Портфолио: максимум **5** элементов на тренера (было 20), минимума нет, на публикацию профиля не влияет; ошибка `409` с `code: PORTFOLIO_LIMIT_REACHED`. Reorder принимает не более 5 id.
+- Портфолио: два независимых лимита — максимум **5 записей** (работ) на тренера (было 20; шестая → `409 PORTFOLIO_LIMIT_REACHED`) и максимум **5 фото в каждой записи** (шестое → `409 PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED`); общего лимита фото на портфолио нет. Минимума нет, на публикацию профиля не влияет. Reorder принимает не более 5 id.
 - Миграция: CHECK на `user_profiles.avatar_url` / `trainer_portfolio_items.image_url` допускает `http://` и `https://`.
 - Деплой: сервис `minio` + volume `miniodata` + `minio-init` (бакет, анонимное чтение), раздача через Caddy `https://API_HOST/files/<bucket>/…`; обновлена `docs/deploy-test-stand.md`.
 
