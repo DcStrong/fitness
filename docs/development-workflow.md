@@ -17,7 +17,7 @@
 
 ```bash
 # 1. Postgres и MinIO (хранилище картинок)
-docker compose up -d postgres minio minio-init
+docker compose up -d postgres minio
 
 # 2. API
 cd backend/api
@@ -34,7 +34,7 @@ flutter run -d chrome --web-port 8080 --dart-define=API_BASE_URL=http://localhos
 
 В консоли `flutter run` печатается ссылка на DevTools (`The Flutter DevTools debugger and profiler on Chrome is available at: …`). Горячие клавиши: `r` — hot reload, `R` — hot restart, `q` — выход. Release-сборку для проверки как на проде: `flutter build web --release --dart-define=API_BASE_URL=http://localhost:3001`, затем `python3 -m http.server 8080` из `build/web`.
 
-Если `quay.io` недоступен (ответ 401 при `docker pull`), поднимите MinIO из зеркала на Docker Hub:
+Для MinIO нужен файл лицензии AIStor Free (https://www.min.io/download, «Request License Key» → Free): положите его как `minio.license` в корень репозитория. Образ берётся из `quay.io`. Если `quay.io` недоступен из вашей сети (ответ 401 при `docker pull`), как временный запасной вариант поднимите MinIO из зеркала на Docker Hub вместо compose-сервиса:
 
 ```bash
 docker run -d --name fitness_yoda_minio --restart unless-stopped \
@@ -58,7 +58,7 @@ git pull && docker compose -f docker-compose.deploy.yml up -d --build
 
 | Изменение в `dev` | Что сделать на VDS перед `git pull && … up -d --build` |
 |-------------------|---------------------------------------------------------|
-| **MinIO + загрузка фото** (`add-media-upload`) | Добавить в `.env` на VDS переменные из `deploy/.env.example`: `S3_SECRET_KEY` (`openssl rand -hex 16`, только буквы и цифры, после первого запуска не менять), `S3_BUCKET`, `S3_ACCESS_KEY`, а также `MINIO_IMAGE` / `MINIO_MC_IMAGE`, если `quay.io` недоступен. Новый Caddyfile (маршрут `/files/*`) подхватится при пересборке. Бэкап тома `miniodata` — см. `docs/deploy-test-stand.md`. |
+| **MinIO + загрузка фото** (`add-media-upload`) | Добавить в `.env` на VDS переменные из `deploy/.env.example`: `S3_SECRET_KEY` (`openssl rand -hex 16`, только буквы и цифры, после первого запуска не менять), `S3_BUCKET`, `S3_ACCESS_KEY`, `MINIO_LICENSE_FILE` (путь к файлу лицензии AIStor Free на сервере, ключ запрашивается на https://www.min.io/download). Новый Caddyfile (маршрут `/files/*`) подхватится при пересборке. Бэкап тома `miniodata` — см. `docs/deploy-test-stand.md`. |
 | **Залы тренера** (`add-trainer-gyms`) | Ничего нового в окружении; миграция `TrainerGyms` применяется при старте API. Перед обновлением сделайте `pg_dump`. |
 
 Проверка после обновления: `curl https://<API_HOST>/health`, затем загрузка фото в профиле тренера.
