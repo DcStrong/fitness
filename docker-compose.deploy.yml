@@ -72,6 +72,8 @@ services:
       S3_BUCKET: ${S3_BUCKET:-media}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minio}
       S3_SECRET_KEY: ${S3_SECRET_KEY:?задайте S3_SECRET_KEY}
+      # Ссылка/QR приглашения: https://APP_HOST/i/<token> (см. docs/deploy-test-stand.md).
+      INVITE_HTTPS_BASE: ${INVITE_HTTPS_BASE:-https://${APP_HOST:?задайте APP_HOST}}
       S3_PUBLIC_URL: https://${API_HOST:?задайте API_HOST}/files/${S3_BUCKET:-media}
 
   web:

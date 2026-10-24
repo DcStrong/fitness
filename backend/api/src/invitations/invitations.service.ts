@@ -20,6 +20,8 @@ import type {
 } from './interface/invitation.returns';
 
 const DEFAULT_TTL_DAYS = 7;
+/** Локальный дефолт: Flutter web на :8080 (см. docs/development-workflow.md). */
+const DEFAULT_INVITE_HTTPS_BASE = 'http://localhost:8080';
 
 @Injectable()
 export class InvitationsService {
@@ -175,17 +177,20 @@ export class InvitationsService {
     invitation: InvitationModel,
     rawToken: string,
   ): InvitationCreatedReturns {
-    const httpsBase =
-      this.config.get<string>('INVITE_HTTPS_BASE') ??
-      'https://app.fitness-yoda.local/i';
-    const schemeBase =
-      this.config.get<string>('INVITE_SCHEME_BASE') ?? 'fitnessyoda://invite';
+    const webBase = (
+      this.config.get<string>('INVITE_HTTPS_BASE') ?? DEFAULT_INVITE_HTTPS_BASE
+    ).replace(/\/+$/u, '');
+    // Допускаем и «чистый» origin веб-приложения, и старый формат с суффиксом /i.
+    const httpsBase = webBase.endsWith('/i') ? webBase : `${webBase}/i`;
+    const schemeBase = (
+      this.config.get<string>('INVITE_SCHEME_BASE') ?? 'fitnessyoda://invite'
+    ).replace(/\/+$/u, '');
 
     return {
       ...this.toPublicInvitation(invitation),
       token: rawToken,
-      inviteUrl: `${httpsBase.replace(/\/$/, '')}/${rawToken}`,
-      deepLink: `${schemeBase.replace(/\/$/, '')}/${rawToken}`,
+      inviteUrl: `${httpsBase}/${rawToken}`,
+      deepLink: `${schemeBase}/${rawToken}`,
     };
   }
 

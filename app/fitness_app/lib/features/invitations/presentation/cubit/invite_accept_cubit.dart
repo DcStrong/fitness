@@ -46,6 +46,12 @@ class InviteAcceptCubit extends Cubit<InviteAcceptState> {
       );
       return true;
     } on ApiException catch (error) {
+      // Токен отклонён сервером (истёк, использован, чужой): не держим его
+      // «в ожидании», иначе после каждого входа откроется та же ошибка.
+      final code = error.statusCode;
+      if (code != null && code >= 400 && code < 500 && code != 401) {
+        await _repository.clearPendingToken();
+      }
       emit(state.copyWith(isSubmitting: false, errorMessage: error.message));
       return false;
     } catch (error) {

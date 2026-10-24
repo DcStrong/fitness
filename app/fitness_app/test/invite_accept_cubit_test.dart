@@ -47,6 +47,20 @@ void main() {
       ],
     );
 
+    test('отклонённый токен (4xx) не остаётся в ожидании', () async {
+      when(
+        () => repository.accept(any()),
+      ).thenThrow(ApiException('Приглашение истекло', statusCode: 409));
+      final cubit = InviteAcceptCubit(
+        repository: repository,
+        initialToken: 'tok_abcdefghijklmnop',
+      );
+
+      expect(await cubit.accept(), isFalse);
+      verify(() => repository.clearPendingToken()).called(1);
+      await cubit.close();
+    });
+
     blocTest<InviteAcceptCubit, InviteAcceptState>(
       'accept failure',
       build: () {

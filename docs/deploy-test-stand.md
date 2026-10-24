@@ -29,6 +29,7 @@
 ## Полезное
 - Логи: `docker compose -f docker-compose.deploy.yml logs -f api`
 - Обновить до новой версии: `git pull && docker compose -f docker-compose.deploy.yml up -d --build`
+- **После обновления до версии со ссылками-приглашениями** в `.env` ничего добавлять не обязательно: `INVITE_HTTPS_BASE` по умолчанию берётся как `https://<APP_HOST>`. Нужны `up -d --build` (пересобираются `api` и `web`: новый Caddyfile и Flutter с path-ссылками). Чтобы задать другой адрес — добавьте в `.env` `INVITE_HTTPS_BASE=https://app.149.154.64.173.sslip.io` (без `/i` и без завершающего `/`).
 - Остановить: `docker compose -f docker-compose.deploy.yml down` (данные сохраняются; `down -v` удалит их).
 - Если сертификат не выдался: проверьте, что порты 80 и 443 открыты у провайдера, а адреса из `.env` открываются.
 - Сделать сайт доступным только знакомым: на тестовом стенде CORS открыт для всех; для production его нужно сузить.
@@ -56,3 +57,14 @@
 ## Производительность Flutter web
 
 Flutter web рисует всё на canvas (CanvasKit) и не равен нативному приложению: на слабых телефонах и в Safari будет заметно медленнее, ввод текста идёт через скрытый `<input>`. Для настоящей оценки плавности собирайте APK/iOS. Что уже сделано на стенде: release-сборка, CanvasKit раздаётся с нашего сервера (`--no-web-resources-cdn`), Caddy сжимает zstd/gzip и кеширует тяжёлые ассеты, картинки карточек главной уменьшены до 640 px (webp).
+
+## Ссылки-приглашения (QR) и открытие приложения
+- **Ссылка:** `https://<APP_HOST>/i/<token>` (для стенда `https://app.149.154.64.173.sslip.io/i/<token>`). API строит её из `INVITE_HTTPS_BASE`; в `docker-compose.deploy.yml` она по умолчанию равна `https://${APP_HOST}`. Локально: `http://localhost:8080/i/<token>` (`backend/api/.env.example`, веб на `--web-port 8080`).
+- **Веб:** Flutter использует path-ссылки (без `#`), Caddy на любой путь без файла отдаёт `index.html`, поэтому `/i/<token>` открывается напрямую и из QR. Гость попадает на вход/регистрацию, токен запоминается и принимается после входа; вошедший ученик принимает приглашение сразу.
+- **Мобильное приложение вместо веба** (Android App Links / iOS Universal Links). Caddy отдаёт `/.well-known/assetlinks.json` и `/.well-known/apple-app-site-association` из `deploy/well-known/`. В репозитории **плейсхолдеры, их нужно заполнить вам**:
+  - `deploy/well-known/assetlinks.json`: `REPLACE_WITH_RELEASE_SHA256_CERT_FINGERPRINT` → SHA-256 отпечаток ключа подписи приложения (`keytool -list -v -keystore <keystore>` или Play Console → App signing). `package_name` сейчас `com.example.fitness_app` (как в `build.gradle`); при смене applicationId обновите и здесь.
+  - `deploy/well-known/apple-app-site-association`: `REPLACE_WITH_APPLE_TEAM_ID` → Apple Team ID (developer.apple.com → Membership). Bundle ID: `com.dcstrong.fitnessApp`.
+  - Хост стенда прописан в `android/app/src/main/AndroidManifest.xml` (intent-filter `autoVerify`) и `ios/Runner/Runner.entitlements` (`applinks:`); при другом `APP_HOST` замените его там.
+  - После правки файлов: `up -d --build`, затем проверка `curl -i https://<APP_HOST>/.well-known/assetlinks.json` (ответ `200`, `application/json`). Без подписи/Team ID верификация не пройдёт, и ссылка откроется в браузере (веб-версия): это ожидаемый запасной вариант.
+- **Запасной вариант:** кастомная схема `fitnessyoda://invite/<token>` (`INVITE_SCHEME_BASE`) работает без верификации домена, если приложение установлено.
+- **Не проверено без реальных устройств и домена:** App Links / Universal Links, запуск приложения из QR камерой.

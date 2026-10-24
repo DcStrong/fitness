@@ -59,15 +59,18 @@ GoRouter createAppRouter(
       final loc = state.matchedLocation;
       final isAuthRoute = loc == '/login' || loc == '/register';
       final isInviteAccept = loc == '/invite/accept';
+      final isInviteLink = loc.startsWith('/i/');
 
       if (status == AuthStatus.unknown) {
         return null;
       }
 
       if (status == AuthStatus.unauthenticated) {
-        if (isInviteAccept) {
+        if (isInviteAccept || isInviteLink) {
           final token = InviteLinks.extractToken(
-            state.uri.queryParameters['token'],
+            isInviteLink
+                ? state.uri.pathSegments.last
+                : state.uri.queryParameters['token'],
           );
           if (token != null) {
             await invitationsRepository.savePendingToken(token);
@@ -281,7 +284,10 @@ GoRouter createAppRouter(
                     builder: (context, state) {
                       final fromQuery = state.uri.queryParameters['token'];
                       final token = InviteLinks.extractToken(fromQuery);
-                      return InviteAcceptScreen(initialToken: token);
+                      return InviteAcceptScreen(
+                        initialToken: token,
+                        autoAccept: token != null,
+                      );
                     },
                   ),
                   GoRoute(
