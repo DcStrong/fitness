@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/fy_card.dart';
 import '../../../../core/widgets/fy_info_banner.dart';
 import '../../../../core/widgets/fy_input_card.dart';
 import '../../../../core/widgets/fy_primary_button.dart';
 import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
+import '../helper/phone_mask.helper.dart';
 import 'safe_network_image.dart';
+import 'specialty_tags_field.dart';
 
 class SocialProfileEditor extends StatefulWidget {
   const SocialProfileEditor({required this.isTrainer, super.key});
@@ -25,7 +28,8 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
   final _avatar = TextEditingController();
   final _bio = TextEditingController();
   final _city = TextEditingController();
-  final _specialties = TextEditingController();
+  final _specialtiesKey = GlobalKey<SpecialtyTagsFieldState>();
+  List<String> _specialties = [];
   final _phone = TextEditingController();
   final _telegram = TextEditingController();
   final Set<PreferredContactChannel> _preferredChannels = {};
@@ -47,7 +51,6 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
     _avatar.dispose();
     _bio.dispose();
     _city.dispose();
-    _specialties.dispose();
     _phone.dispose();
     _telegram.dispose();
     super.dispose();
@@ -65,8 +68,8 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
       _avatar.text = profile.avatarUrl ?? '';
       _bio.text = profile.bio ?? '';
       _city.text = profile.city ?? '';
-      _specialties.text = profile.specialties.join(', ');
-      _phone.text = profile.phone ?? '';
+      _specialties = [...profile.specialties];
+      _phone.text = formatRuPhone(profile.phone ?? '');
       _telegram.text = profile.telegramUsername ?? '';
       _preferredChannels
         ..clear()
@@ -86,6 +89,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
   }
 
   Future<void> _save() async {
+    _specialtiesKey.currentState?.commitPending();
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _saving = true;
@@ -98,15 +102,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
         avatarUrl: _avatar.text,
         bio: _bio.text,
         city: widget.isTrainer ? _city.text : null,
-        specialties: widget.isTrainer
-            ? _specialties.text
-                  .split(',')
-                  .map((item) => item.trim())
-                  .where((item) => item.isNotEmpty)
-                  .toSet()
-                  .take(10)
-                  .toList()
-            : const [],
+        specialties: widget.isTrainer ? _specialties : const [],
         trainingModes: widget.isTrainer
             ? [
                 if (_profile?.trainingModes.contains('online') == true)
@@ -115,7 +111,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                   'offline',
               ]
             : const [],
-        phone: _phone.text,
+        phone: normalizeRuPhone(_phone.text) ?? '',
         telegramUsername: _telegram.text,
         preferredContactChannels: _preferredChannels.toList(),
       );
@@ -251,10 +247,10 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                         : 'Не более 120 символов',
                   ),
                   const SizedBox(height: 10),
-                  FyInputCard(
-                    label: 'Специализации через запятую',
-                    icon: Icons.fitness_center_rounded,
-                    controller: _specialties,
+                  SpecialtyTagsField(
+                    key: _specialtiesKey,
+                    tags: _specialties,
+                    onChanged: (tags) => _specialties = tags,
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -298,6 +294,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                   icon: Icons.phone_outlined,
                   controller: _phone,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: const [RuPhoneInputFormatter()],
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.isEmpty) {
@@ -307,9 +304,9 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                           ? 'Укажите телефон для выбранного канала'
                           : null;
                     }
-                    return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(text)
+                    return normalizeRuPhone(text) != null
                         ? null
-                        : 'Введите телефон в формате +79991234567';
+                        : 'Введите номер полностью: +7 (XXX) XXX-XX-XX';
                   },
                 ),
                 const SizedBox(height: 10),
@@ -334,9 +331,24 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                   },
                 ),
                 const SizedBox(height: 10),
-                Text('Предпочтительные каналы: ${_profile!.email}'),
+                const SizedBox(height: 6),
+                Text(
+                  'Предпочтительные каналы',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Email для связи: ${_profile!.email}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 8,
                   children: [
                     for (final channel in PreferredContactChannel.values)
                       FilterChip(
@@ -547,81 +559,11 @@ class _PortfolioEditor extends StatelessWidget {
   }
 
   Future<void> _edit(BuildContext context, [PortfolioItem? item]) async {
-    final title = TextEditingController(text: item?.title);
-    final description = TextEditingController(text: item?.description);
-    final image = TextEditingController(text: item?.imageUrl);
-    final result = await showDialog<(String, String, String)>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(item == null ? 'Новая работа' : 'Изменить работу'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: title,
-                maxLength: 120,
-                decoration: const InputDecoration(labelText: 'Название'),
-              ),
-              TextField(
-                controller: description,
-                maxLength: 1000,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Описание'),
-              ),
-              TextField(
-                controller: image,
-                decoration: const InputDecoration(
-                  labelText: 'HTTPS-ссылка на изображение',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final imageUri = Uri.tryParse(image.text.trim());
-              final imageValid =
-                  image.text.trim().isEmpty ||
-                  (imageUri?.scheme == 'https' &&
-                      imageUri?.host.isNotEmpty == true);
-              if (title.text.trim().isNotEmpty && imageValid) {
-                Navigator.pop(dialogContext, (
-                  title.text,
-                  description.text,
-                  image.text,
-                ));
-              }
-            },
-            child: const Text('Сохранить'),
-          ),
-        ],
-      ),
+    final saved = await context.push<bool>(
+      item?.id == null
+          ? '/profile/portfolio/new'
+          : '/profile/portfolio/${item!.id}',
     );
-    title.dispose();
-    description.dispose();
-    image.dispose();
-    if (result == null || !context.mounted) return;
-    final repository = context.read<SocialRepository>();
-    if (item?.id case final id?) {
-      await repository.updatePortfolioItem(
-        id: id,
-        title: result.$1,
-        description: result.$2,
-        imageUrl: result.$3,
-      );
-    } else {
-      await repository.createPortfolioItem(
-        title: result.$1,
-        description: result.$2,
-        imageUrl: result.$3,
-      );
-    }
-    await onChanged();
+    if (saved == true) await onChanged();
   }
 }

@@ -33,6 +33,7 @@ import '../../features/session_workout/presentation/session_workout_page.dart';
 import '../../features/schedule/presentation/screens/sessions_list_screen.dart';
 import '../../features/schedule/presentation/screens/student_book_screen.dart';
 import '../../features/student_hub/presentation/student_hub_page.dart';
+import '../../features/social/presentation/screens/portfolio_editor_screen.dart';
 import '../../features/social/presentation/screens/reviews_screen.dart';
 import '../../features/social/presentation/screens/trainer_profile_screen.dart';
 import '../../features/social/presentation/screens/trainers_page.dart';
@@ -355,6 +356,16 @@ GoRouter createAppRouter(
                   GoRoute(
                     path: '/profile/privacy',
                     builder: (context, state) => const ProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: '/profile/portfolio/new',
+                    builder: (context, state) => const PortfolioEditorScreen(),
+                  ),
+                  GoRoute(
+                    path: '/profile/portfolio/:id',
+                    builder: (context, state) => PortfolioEditorScreen(
+                      itemId: state.pathParameters['id'],
+                    ),
                   ),
                   GoRoute(
                     path: '/reviews',

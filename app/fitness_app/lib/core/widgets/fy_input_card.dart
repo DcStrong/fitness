@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
 
@@ -17,6 +18,7 @@ class FyInputCard extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.textInputAction,
     this.validator,
+    this.inputFormatters,
     this.onChanged,
     this.onFieldSubmitted,
     this.obscureText = false,
@@ -38,6 +40,7 @@ class FyInputCard extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final TextInputAction? textInputAction;
   final FormFieldValidator<String>? validator;
+  final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
   final bool obscureText;
@@ -126,6 +129,7 @@ class FyInputCard extends StatelessWidget {
                         keyboardType: keyboardType,
                         textCapitalization: textCapitalization,
                         textInputAction: textInputAction,
+                        inputFormatters: inputFormatters,
                         onChanged: (value) {
                           field.didChange(value);
                           onChanged?.call(value);

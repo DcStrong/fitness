@@ -211,10 +211,7 @@ class PlansRepository {
     try {
       final response = await _dio.get<dynamic>(
         '/plans',
-        queryParameters: {
-          'kind': 'assigned',
-          'studentId': ?studentId,
-        },
+        queryParameters: {'kind': 'assigned', 'studentId': ?studentId},
       );
       return _asList(response.data).map(TrainingPlanItem.fromJson).toList();
     } on DioException catch (e) {
