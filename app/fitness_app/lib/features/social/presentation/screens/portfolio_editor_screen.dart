@@ -6,7 +6,6 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/fy_info_banner.dart';
 import '../../../../core/widgets/fy_primary_button.dart';
 import '../../../../core/widgets/fy_top_bar.dart';
-import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
 import '../widgets/portfolio_photo_picker.dart';
 import '../widgets/safe_network_image.dart';
