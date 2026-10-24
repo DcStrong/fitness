@@ -34,6 +34,10 @@ export interface ListTrainersParams {
   query?: string;
   specialty?: string;
   mode?: TrainingMode;
+  city?: string;
+  gymId?: string;
+  district?: string;
+  gymQuery?: string;
 }
 
 /**

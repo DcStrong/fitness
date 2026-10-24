@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import type {
   ListTrainersParams,
   TrainerDiscoveryRecord,
   TrainerDiscoveryRecords,
 } from '../../social/interface';
+import { escapeLike } from '../util/escape-like.util';
 import { UserProfileEntity } from '../entity/user-profile.entity';
 
 @Injectable()
@@ -104,6 +105,8 @@ export class UserProfileRepository {
       });
     }
 
+    this.applyGymFilters(base, params);
+
     const countQb = base.clone().select('COUNT(DISTINCT profile.user_id)', 'count');
     const countRaw = (await countQb.getRawOne()) as { count?: string; } | undefined;
 
@@ -156,5 +159,49 @@ export class UserProfileRepository {
     }));
 
     return { items, total: Number(countRaw?.count ?? 0) };
+  }
+
+  /**
+   * Фильтры по залам и городу. Условия по залу проверяются на одном и том же
+   * зале тренера (EXISTS), поэтому строки профиля не дублируются.
+   */
+  private applyGymFilters(
+    qb: SelectQueryBuilder<UserProfileEntity>,
+    params: ListTrainersParams,
+  ): void {
+    const gymConditions: string[] = [];
+    const gymParams: Record<string, string> = {};
+    if (params.gymId) {
+      gymConditions.push('g.id = :gymId');
+      gymParams['gymId'] = params.gymId;
+    }
+    if (params.district) {
+      gymConditions.push('g.district ILIKE :district ESCAPE \'\\\'');
+      gymParams['district'] = `%${escapeLike(params.district)}%`;
+    }
+    if (params.gymQuery) {
+      gymConditions.push(
+        '(g.name ILIKE :gymQuery ESCAPE \'\\\' OR g.address ILIKE :gymQuery ESCAPE \'\\\')',
+      );
+      gymParams['gymQuery'] = `%${escapeLike(params.gymQuery)}%`;
+    }
+    /**
+     *
+     */
+    function gymExists(extra: string[]): string {
+      const conditions = extra.map(condition => ` AND ${condition}`).join('');
+
+      return `EXISTS (SELECT 1 FROM trainer_gyms tg INNER JOIN gyms g ON g.id = tg.gym_id WHERE tg.coach_id = profile.user_id${conditions})`;
+    }
+
+    if (gymConditions.length > 0) {
+      qb.andWhere(gymExists(gymConditions), gymParams);
+    }
+    if (params.city) {
+      qb.andWhere(
+        `(profile.city ILIKE :city ESCAPE '\\' OR ${gymExists(['g.city ILIKE :city ESCAPE \'\\\''])})`,
+        { city: `%${escapeLike(params.city)}%` },
+      );
+    }
   }
 }

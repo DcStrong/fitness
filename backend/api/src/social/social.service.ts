@@ -10,12 +10,15 @@ import { MAX_PORTFOLIO_ITEMS } from './social.constants';
 import { CoachStudentLinkRepository } from '../database/repository/coach-student-link.repository';
 import { SessionRepository } from '../database/repository/session.repository';
 import { SessionReviewRepository } from '../database/repository/session-review.repository';
+import { TrainerGymRepository } from '../database/repository/trainer-gym.repository';
 import { TrainerPortfolioRepository } from '../database/repository/trainer-portfolio.repository';
 import { UserProfileRepository } from '../database/repository/user-profile.repository';
 import { UserRepository } from '../database/repository/user.repository';
+import type { GymEntity } from '../database/entity/gym.entity';
 import type { SessionReviewEntity } from '../database/entity/session-review.entity';
 import type { TrainerPortfolioItemEntity } from '../database/entity/trainer-portfolio-item.entity';
 import type { UserProfileEntity } from '../database/entity/user-profile.entity';
+import type { GymModel } from '../gyms/interface';
 import type {
   CreatePortfolioItemParams,
   EligibleReviewSession,
@@ -37,6 +40,10 @@ import type {
   UpdatePortfolioItemParams,
 } from './interface';
 
+/** Лимиты специализаций тренера. */
+export const MAX_SPECIALTIES = 8;
+export const MAX_SPECIALTY_LENGTH = 30;
+
 @Injectable()
 export class SocialService {
   constructor(
@@ -46,6 +53,7 @@ export class SocialService {
     private readonly sessions: SessionRepository,
     private readonly links: CoachStudentLinkRepository,
     private readonly users: UserRepository,
+    private readonly trainerGyms: TrainerGymRepository,
   ) {}
 
   /**
@@ -55,10 +63,11 @@ export class SocialService {
     const profile = await this.profiles.findByUserId(actor.id);
     const items = this.isTrainer(actor)? await this.portfolio.findByCoachId(actor.id): [];
     const rating = this.isTrainer(actor)? await this.reviews.ratingForCoach(actor.id): { averageRating: null, reviewCount: 0 };
+    const gyms = this.isTrainer(actor)? await this.trainerGyms.findGymsByCoachId(actor.id): [];
     const email =
       actor.email ?? (await this.users.findById(actor.id))?.email ?? '';
 
-    return this.toOwnerProfile(actor.id, email, profile, items, rating);
+    return this.toOwnerProfile(actor.id, email, profile, items, rating, gyms);
   }
 
   /**
@@ -160,7 +169,13 @@ throw new NotFoundException('User not found');
       ...input,
       ...input.query ? { query: this.normalizeSearch(input.query) } : {},
       ...input.specialty? { specialty: this.normalizeSearch(input.specialty).toLowerCase() }: {},
+      ...input.city? { city: this.normalizeSearch(input.city) }: {},
+      ...input.district? { district: this.normalizeSearch(input.district) }: {},
+      ...input.gymQuery? { gymQuery: this.normalizeSearch(input.gymQuery) }: {},
     });
+    const gymsByTrainer = await this.trainerGyms.findGymsByCoachIds(
+      records.items.map(({ profile }) => profile.userId),
+    );
 
     return {
       items: records.items.map(({ profile, averageRating, reviewCount }) => ({
@@ -171,6 +186,8 @@ throw new NotFoundException('User not found');
         city: profile.city,
         specialties: profile.specialties,
         trainingModes: profile.trainingModes,
+        gyms: (gymsByTrainer.get(profile.userId) ?? []).map(gym =>
+          this.toGym(gym)),
         ...profile.showRating ? { averageRating, reviewCount } : {},
       })),
       meta: this.pageMeta(input, records.total),
@@ -188,9 +205,10 @@ throw new NotFoundException('User not found');
     if (!profile?.displayName) {
       throw new NotFoundException('Trainer not found');
     }
-    const [items, rating] = await Promise.all([
+    const [items, rating, gyms] = await Promise.all([
       this.portfolio.findByCoachId(trainerId),
       this.reviews.ratingForCoach(trainerId),
+      this.trainerGyms.findGymsByCoachId(trainerId),
     ]);
     const base: PublicTrainerProfile = {
       id: trainerId,
@@ -200,6 +218,7 @@ throw new NotFoundException('User not found');
       city: profile.city,
       specialties: profile.specialties,
       trainingModes: profile.trainingModes,
+      gyms: gyms.map(gym => this.toGym(gym)),
       portfolio: items.map(item => this.toPortfolio(item)),
     };
     if (profile.showRating) {
@@ -471,6 +490,7 @@ throw new NotFoundException('User not found');
     profile: UserProfileEntity | null,
     items: TrainerPortfolioItemEntity[],
     rating: { averageRating: number | null; reviewCount: number; },
+    gyms: GymEntity[],
   ): OwnerProfileModel {
     if (!profile) {
       return {
@@ -492,6 +512,7 @@ throw new NotFoundException('User not found');
           showReviewerName: false,
         },
         portfolio: items.map(item => this.toPortfolio(item)),
+        gyms: gyms.map(gym => this.toGym(gym)),
         averageRating: rating.averageRating,
         reviewCount: rating.reviewCount,
         createdAt: null,
@@ -518,6 +539,7 @@ throw new NotFoundException('User not found');
         showReviewerName: profile.showReviewerName,
       },
       portfolio: items.map(item => this.toPortfolio(item)),
+      gyms: gyms.map(gym => this.toGym(gym)),
       averageRating: rating.averageRating,
       reviewCount: rating.reviewCount,
       createdAt: profile.createdAt,
@@ -577,8 +599,8 @@ throw new NotFoundException('User not found');
 return null;
 }
     const normalized = value.replace(/[\s()-]/gu, '');
-    if (!/^\+[1-9]\d{7,14}$/u.test(normalized)) {
-      throw new BadRequestException('phone must use international format');
+    if (!/^\+7\d{10}$/u.test(normalized)) {
+      throw new BadRequestException('phone must use format +7XXXXXXXXXX');
     }
 
     return normalized;
@@ -597,6 +619,19 @@ return null;
     }
 
     return normalized;
+  }
+
+  /**
+   *
+   */
+  private toGym(gym: GymEntity): GymModel {
+    return {
+      id: gym.id,
+      name: gym.name,
+      address: gym.address,
+      city: gym.city,
+      district: gym.district,
+    };
   }
 
   /**
@@ -668,6 +703,16 @@ return null;
   private normalizeSpecialties(values: string[]): string[] {
     const normalized = values.map(value =>
       this.requiredText(value, 'specialty').toLowerCase());
+    if (normalized.length > MAX_SPECIALTIES) {
+      throw new BadRequestException(
+        `specialties must contain at most ${MAX_SPECIALTIES} tags`,
+      );
+    }
+    if (normalized.some(value => value.length > MAX_SPECIALTY_LENGTH)) {
+      throw new BadRequestException(
+        `specialty must be at most ${MAX_SPECIALTY_LENGTH} characters`,
+      );
+    }
     if (new Set(normalized).size !== normalized.length) {
       throw new BadRequestException('specialties must be unique');
     }

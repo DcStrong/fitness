@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -42,10 +43,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(10)
+  @ArrayMaxSize(8)
   @ArrayUnique()
   @IsString({ each: true })
-  @MaxLength(40, { each: true })
+  @MaxLength(30, { each: true })
   specialties?: string[];
 
   @IsOptional()
@@ -56,7 +57,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(24)
+  @Matches(/^\+7\d{10}$/u, { message: 'phone must use format +7XXXXXXXXXX' })
   phone?: string | null;
 
   @IsOptional()
@@ -112,6 +113,26 @@ export class TrainerDiscoveryQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['online', 'offline'])
   mode?: TrainingMode;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  city?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  gymId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  district?: string;
+
+  /** Подстрока названия или адреса зала. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  gymQuery?: string;
 }
 
 export class SavePortfolioItemDto {

@@ -15,6 +15,7 @@ import { TagsModule } from './tags/tags.module';
 import { UsersModule } from './users/users.module';
 import { BillingModule } from './billing/billing.module';
 import { SocialModule } from './social/social.module';
+import { GymsModule } from './gyms/gyms.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BookingRequestsModule } from './booking-requests/booking-requests.module';
 import { RecurringBookingsModule } from './recurring-bookings/recurring-bookings.module';
@@ -46,6 +47,7 @@ import { MediaModule } from './media/media.module';
     ExercisesModule,
     BillingModule,
     SocialModule,
+    GymsModule,
     BookingRequestsModule,
     RecurringBookingsModule,
     SessionPackagesModule,
