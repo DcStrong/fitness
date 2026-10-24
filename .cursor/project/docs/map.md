@@ -10,8 +10,6 @@
 |--------|--------|
 | `add-coach-student-chat` | Чат тренер↔ученик: WebSocket + REST, системные сообщения о занятиях |
 | `add-media-upload` | Загрузка картинок (`POST /media/images`, MinIO), портфолио до 5 фото |
-| `fix-invite-links` | Ссылка/QR приглашения на реальный хост (`INVITE_HTTPS_BASE`), `/i/<token>` на вебе, App/Universal Links |
-| `add-trainer-gyms` | Залы тренера (база копится из ввода), поиск по залу/району/адресу, валидация телефона и специализаций; код `src/gyms`, `src/social` |
 
 ## Домены API ↔ Flutter ↔ spec ↔ docs
 
@@ -53,6 +51,7 @@
 |-----|---------|-------|------|
 | `invitations` | `invitations` | `invitations-api`, `mobile-invitations`, `coach-student-link` | `docs/domain/invitations.md` |
 | `social` (routes `/profiles`) | `social` | `profile-privacy`, `trainer-discovery`, `trainer-portfolio`, `session-reviews`, `mobile-social`, `web-social` | `docs/domain/social-privacy.md` |
+| `gyms` (routes `/profiles/me/gyms`, `/gyms/suggestions`), фильтры в `social` | `social` | `trainer-gyms-api`, `trainer-discovery` | `docs/domain/gyms.md` |
 
 ### Чат
 
@@ -113,3 +112,5 @@
 | `2026-08-23-polish-student-hub-session-tags-ui` | Student hub / session / tags UI |
 | `2026-09-29-polish-trainer-home-bento` | Trainer Home bento variant C |
 | `2026-09-29-polish-trainer-home-bento-visual` | Визуальная доводка trainer Home к mock C (date chip, icon stats, timeline, soft-cards) |
+| `2026-10-25-add-trainer-gyms` | Залы тренера (название + адрес, база копится из ввода), поиск по залу/району/адресу, валидация телефона и специализаций |
+| `2026-10-25-fix-invite-links` | QR/ссылка приглашения на реальный хост (`INVITE_HTTPS_BASE`), `/i/<token>` на вебе, App/Universal Links |

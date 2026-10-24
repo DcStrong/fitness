@@ -118,9 +118,9 @@ OpenSpec: `social-privacy` → archived `2026-07-19-social-privacy`
 | Что | Change / источник | Статус |
 |-----|-------------------|--------|
 | Профиль тренера: маска телефона, специализации чипами, экран портфолио, диалог о несохранённых изменениях | [trainer-profile-polish](../plans/trainer-profile-polish.md) | ✅ проверено |
-| Ссылки-приглашения на реальный домен, маршрут `/i/<token>`, deep link (App Links / Universal Links проверены) | `fix-invite-links` | ✅ проверено, осталась архивация |
+| Ссылки-приглашения на реальный домен, маршрут `/i/<token>`, deep link (App Links / Universal Links проверены) | `2026-10-25-fix-invite-links` | ✅ закрыто, архив |
 | Загрузка фото с устройства (аватар, портфолио): MinIO, WebP, до 5 записей портфолио и до 5 фото в каждой | `add-media-upload` | код готов, закрыть пункты из плана выполнения ниже |
-| Залы тренера: название + адрес, поиск тренеров по залу/району/адресу, валидация телефона и специализаций | `add-trainer-gyms` | код готов, закрыть пункты из плана выполнения ниже |
+| Залы тренера: название + адрес, поиск тренеров по залу/району/адресу, валидация телефона и специализаций | `2026-10-25-add-trainer-gyms` | ✅ закрыто, архив |
 
 Перед выкаткой на VDS: переменные `S3_*` и `INVITE_HTTPS_BASE` в `.env` сервера, `pg_dump`, при недоступном `quay.io` зеркало MinIO. Две новые миграции применяются при старте API.
 
@@ -130,10 +130,7 @@ OpenSpec: `social-privacy` → archived `2026-07-19-social-privacy`
 |---|-----|--------|
 | 1 | Проверить `docker compose up` с MinIO на тестовом стенде (образы с `quay.io` не скачивались, нужен план с зеркалом) | `add-media-upload` |
 | 2 | `/opsx-sync` и `/opsx-archive` для `add-media-upload`, обновить `.cursor/project/docs/map.md` | `add-media-upload` |
-| 3 | Postman-коллекция: новые запросы залов (OpenAPI-контракта в репозитории нет) | `add-trainer-gyms` |
-| 4 | Домен gyms в `docs/domain` и `map.md`, затем `/opsx-sync` и `/opsx-archive` | `add-trainer-gyms` |
-| 5 | `/opsx-archive` для `fix-invite-links` | `fix-invite-links` |
-| 6 | Слить `dev` в `main` и обновить VDS | выкатка |
+| 3 | Слить `dev` в `main` и обновить VDS | выкатка |
 
 Источник статусов дизайн-долга: [docs/design/design-system-status.md](../design/design-system-status.md).  
 Домен слоёв A/B/C: [docs/design/availability-recurring-booking.md](../design/availability-recurring-booking.md).
