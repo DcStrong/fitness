@@ -24,6 +24,9 @@ void main() {
           query: '',
           specialty: '',
           mode: null,
+          gymId: null,
+          district: '',
+          gymQuery: '',
         ),
       ).thenAnswer(
         (_) async => const TrainerDiscoveryPage(
@@ -55,6 +58,9 @@ void main() {
           query: '',
           specialty: '',
           mode: null,
+          gymId: null,
+          district: '',
+          gymQuery: '',
         ),
       ).thenThrow(Exception('offline'));
     },
