@@ -1,5 +1,4 @@
 import 'package:fitness_app/app/theme/app_theme.dart';
-import 'package:fitness_app/features/finance/data/finance_models.dart';
 import 'package:fitness_app/features/home/presentation/cubit/home_state.dart';
 import 'package:fitness_app/features/home/presentation/widgets/home_bento_shortcuts.dart';
 import 'package:fitness_app/features/home/presentation/widgets/home_stat_chips.dart';
