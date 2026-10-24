@@ -24,7 +24,7 @@ cd backend/api
 cp ../.env.example .env        # один раз; дополните S3_* (см. docs/deploy-test-stand.md, «Локальная разработка»)
 npm install
 npm run migration:run
-npm run start:dev              # http://localhost:3001/health
+npm run start:dev              # http://localhost:3001/health (ссылки приглашений ведут на http://localhost:8080/i/<token>, см. .env.example)
 
 # 3. Web (Flutter) в debug-режиме, с DevTools и hot reload
 cd ../../app/fitness_app

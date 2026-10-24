@@ -8,9 +8,16 @@ import '../cubit/invite_accept_state.dart';
 import '../../../../core/widgets/fy_top_bar.dart';
 
 class InviteAcceptScreen extends StatelessWidget {
-  const InviteAcceptScreen({super.key, this.initialToken});
+  const InviteAcceptScreen({
+    super.key,
+    this.initialToken,
+    this.autoAccept = false,
+  });
 
   final String? initialToken;
+
+  /// Принять сразу при открытии (переход по ссылке/QR), без нажатия кнопки.
+  final bool autoAccept;
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +30,15 @@ class InviteAcceptScreen extends StatelessWidget {
         cubit.loadPendingIfEmpty();
         return cubit;
       },
-      child: const _InviteAcceptView(),
+      child: _InviteAcceptView(autoAccept: autoAccept),
     );
   }
 }
 
 class _InviteAcceptView extends StatefulWidget {
-  const _InviteAcceptView();
+  const _InviteAcceptView({required this.autoAccept});
+
+  final bool autoAccept;
 
   @override
   State<_InviteAcceptView> createState() => _InviteAcceptViewState();
@@ -43,6 +52,13 @@ class _InviteAcceptViewState extends State<_InviteAcceptView> {
     super.initState();
     final token = context.read<InviteAcceptCubit>().state.token;
     _controller = TextEditingController(text: token);
+    if (widget.autoAccept && token.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _submit();
+        }
+      });
+    }
   }
 
   @override

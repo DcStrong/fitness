@@ -65,10 +65,10 @@ type InvitationPayload = {
 Клиент показывает QR с URL вида:
 
 ```text
-https://app.fitness-yoda.example/i/<token>
+<INVITE_HTTPS_BASE>/i/<token>   # например https://app.149.154.64.173.sslip.io/i/<token>, локально http://localhost:8080/i/<token>
 ```
 
-или `fitnessyoda://invite/<token>`.
+или `fitnessyoda://invite/<token>`. Настройка домена, App/Universal Links и обновление стенда: `docs/deploy-test-stand.md`, раздел «Ссылки-приглашения».
 
 Сервер хранит:
 

@@ -10,3 +10,4 @@ RUN flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_UR
 FROM caddy:2
 COPY --from=build /src/build/web /srv
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY deploy/well-known /srv-well-known/.well-known

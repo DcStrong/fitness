@@ -29,15 +29,15 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3001
 
 ## Deep links (приглашения)
 
-Placeholders (см. `lib/core/config/invite_links.dart`):
+Ссылку формирует бэкенд (`INVITE_HTTPS_BASE`), клиент разбирает её в `lib/core/config/invite_links.dart`, входящие ссылки на мобильных ловит `lib/app/router/invite_deep_links.dart` (`app_links`).
 
 | Тип | Формат |
 |-----|--------|
-| HTTPS (в QR) | `https://app.fitness-yoda.local/i/<token>` |
+| HTTPS (в QR) | `https://<APP_HOST>/i/<token>`; локально `http://localhost:8080/i/<token>` |
 | App scheme | `fitnessyoda://invite/<token>` |
-| In-app route | `/invite/accept?token=<token>` или `/i/<token>` |
+| In-app route | `/i/<token>` (или `/invite/accept?token=<token>`) |
 
-Пока без Universal Links / App Links verification — для MVP хватает copy link + ручной ввод токена / in-app route.
+App Links / Universal Links и плейсхолдеры подписи: `docs/deploy-test-stand.md`, раздел «Ссылки-приглашения».
 
 ## Cursor skills (project)
 
