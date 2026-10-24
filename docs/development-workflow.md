@@ -26,14 +26,13 @@ npm install
 npm run migration:run
 npm run start:dev              # http://localhost:3001/health
 
-# 3. Web (Flutter)
+# 3. Web (Flutter) в debug-режиме, с DevTools и hot reload
 cd ../../app/fitness_app
 flutter pub get
-flutter build web --release --dart-define=API_BASE_URL=http://localhost:3001
-cd build/web && python3 -m http.server 8080   # http://localhost:8080
+flutter run -d chrome --web-port 8080 --dart-define=API_BASE_URL=http://localhost:3001
 ```
 
-Для разработки с hot reload вместо шага 3: `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3001`.
+В консоли `flutter run` печатается ссылка на DevTools (`The Flutter DevTools debugger and profiler on Chrome is available at: …`). Горячие клавиши: `r` — hot reload, `R` — hot restart, `q` — выход. Release-сборку для проверки как на проде: `flutter build web --release --dart-define=API_BASE_URL=http://localhost:3001`, затем `python3 -m http.server 8080` из `build/web`.
 
 Если `quay.io` недоступен (ответ 401 при `docker pull`), поднимите MinIO из зеркала на Docker Hub:
 
