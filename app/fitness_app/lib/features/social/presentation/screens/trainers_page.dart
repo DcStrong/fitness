@@ -13,6 +13,7 @@ import '../../data/social_repository.dart';
 import '../bloc/trainers_bloc.dart';
 import '../widgets/safe_network_image.dart';
 import '../widgets/specialty_chips.dart';
+import '../widgets/trainer_gyms_list.dart';
 
 class TrainersPage extends StatelessWidget {
   const TrainersPage({super.key});
@@ -36,12 +37,17 @@ class TrainersView extends StatefulWidget {
 class _TrainersViewState extends State<TrainersView> {
   final _query = TextEditingController();
   final _specialty = TextEditingController();
+  final _gymQuery = TextEditingController();
+  final _district = TextEditingController();
   String? _mode;
+  Gym? _gym;
 
   @override
   void dispose() {
     _query.dispose();
     _specialty.dispose();
+    _gymQuery.dispose();
+    _district.dispose();
     super.dispose();
   }
 
@@ -50,8 +56,22 @@ class _TrainersViewState extends State<TrainersView> {
       query: _query.text,
       specialty: _specialty.text,
       mode: _mode,
+      district: _district.text,
+      gymQuery: _gymQuery.text,
+      gym: _gym,
     ),
   );
+
+  void _pickGym(Gym gym) {
+    _gymQuery.clear();
+    setState(() => _gym = gym);
+    _apply();
+  }
+
+  void _clearGym() {
+    setState(() => _gym = null);
+    _apply();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +111,34 @@ class _TrainersViewState extends State<TrainersView> {
                 textInputAction: TextInputAction.search,
                 onFieldSubmitted: (_) => _apply(),
               ),
+              const SizedBox(height: 10),
+              FyInputCard(
+                label: 'Зал или адрес',
+                icon: Icons.location_on_outlined,
+                controller: _gymQuery,
+                textInputAction: TextInputAction.search,
+                onFieldSubmitted: (_) => _apply(),
+              ),
+              const SizedBox(height: 10),
+              FyInputCard(
+                label: 'Район',
+                icon: Icons.map_outlined,
+                controller: _district,
+                textInputAction: TextInputAction.search,
+                onFieldSubmitted: (_) => _apply(),
+              ),
+              if (_gym case final gym?) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InputChip(
+                    key: const Key('gym-filter-chip'),
+                    avatar: const Icon(Icons.fitness_center_rounded, size: 16),
+                    label: Text('Зал: ${gym.name}'),
+                    onDeleted: _clearGym,
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
@@ -149,7 +197,7 @@ class _TrainersViewState extends State<TrainersView> {
                 ...state.items.map(
                   (trainer) => Padding(
                     padding: const EdgeInsets.only(bottom: 14),
-                    child: _TrainerCard(trainer: trainer),
+                    child: _TrainerCard(trainer: trainer, onGymTap: _pickGym),
                   ),
                 ),
                 if (state.hasNext)
@@ -170,9 +218,10 @@ class _TrainersViewState extends State<TrainersView> {
 }
 
 class _TrainerCard extends StatelessWidget {
-  const _TrainerCard({required this.trainer});
+  const _TrainerCard({required this.trainer, required this.onGymTap});
 
   final PublicTrainer trainer;
+  final ValueChanged<Gym> onGymTap;
 
   @override
   Widget build(BuildContext context) => FyCard(
@@ -206,6 +255,10 @@ class _TrainerCard extends StatelessWidget {
               if (trainer.specialties.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 SpecialtyChips(specialties: trainer.specialties),
+              ],
+              if (trainer.gyms.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                TrainerGymsList(gyms: trainer.gyms, onTap: onGymTap),
               ],
               const SizedBox(height: 8),
               Row(

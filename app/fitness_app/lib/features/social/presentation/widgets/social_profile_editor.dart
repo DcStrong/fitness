@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,14 +11,24 @@ import '../../../../core/widgets/fy_input_card.dart';
 import '../../../../core/widgets/fy_primary_button.dart';
 import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
+import '../../data/device_image_picker.dart';
+import '../cubit/avatar_upload_cubit.dart';
+import '../cubit/gyms_cubit.dart';
+import '../helper/image_upload.helper.dart';
 import '../helper/phone_mask.helper.dart';
-import 'safe_network_image.dart';
+import 'avatar_picker.dart';
+import 'gyms_editor.dart';
 import 'specialty_tags_field.dart';
 
 class SocialProfileEditor extends StatefulWidget {
-  const SocialProfileEditor({required this.isTrainer, super.key});
+  const SocialProfileEditor({
+    required this.isTrainer,
+    this.devicePicker = const ImagePickerDeviceImagePicker(),
+    super.key,
+  });
 
   final bool isTrainer;
+  final DeviceImagePicker devicePicker;
 
   @override
   State<SocialProfileEditor> createState() => _SocialProfileEditorState();
@@ -25,7 +37,8 @@ class SocialProfileEditor extends StatefulWidget {
 class _SocialProfileEditorState extends State<SocialProfileEditor> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _avatar = TextEditingController();
+  AvatarUploadCubit? _avatarCubit;
+  GymsCubit? _gymsCubit;
   final _bio = TextEditingController();
   final _city = TextEditingController();
   final _specialtiesKey = GlobalKey<SpecialtyTagsFieldState>();
@@ -48,7 +61,8 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
   @override
   void dispose() {
     _name.dispose();
-    _avatar.dispose();
+    unawaited(_avatarCubit?.close());
+    unawaited(_gymsCubit?.close());
     _bio.dispose();
     _city.dispose();
     _phone.dispose();
@@ -65,7 +79,15 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
       final profile = await context.read<SocialRepository>().getOwnProfile();
       if (!mounted) return;
       _name.text = profile.displayName ?? '';
-      _avatar.text = profile.avatarUrl ?? '';
+      final repository = context.read<SocialRepository>();
+      unawaited(_avatarCubit?.close());
+      unawaited(_gymsCubit?.close());
+      _avatarCubit = AvatarUploadCubit(
+        repository: repository,
+        picker: widget.devicePicker,
+        initialUrl: profile.avatarUrl,
+      );
+      _gymsCubit = GymsCubit(repository: repository, initial: profile.gyms);
       _bio.text = profile.bio ?? '';
       _city.text = profile.city ?? '';
       _specialties = [...profile.specialties];
@@ -99,7 +121,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
       final repository = context.read<SocialRepository>();
       await repository.updateOwnProfile(
         displayName: _name.text,
-        avatarUrl: _avatar.text,
+        avatarUrl: _avatarCubit?.state.avatarUrl,
         bio: _bio.text,
         city: widget.isTrainer ? _city.text : null,
         specialties: widget.isTrainer ? _specialties : const [],
@@ -155,6 +177,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
         email: _profile?.email ?? '',
         privacy: _privacy,
         portfolio: _profile?.portfolio ?? const [],
+        gyms: _profile?.gyms ?? const [],
         averageRating: _profile?.averageRating,
         reviewCount: _profile?.reviewCount ?? 0,
       );
@@ -196,14 +219,9 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: ClipOval(
-                    child: SafeNetworkImage(
-                      url: _avatar.text,
-                      width: 88,
-                      height: 88,
-                    ),
-                  ),
+                BlocProvider.value(
+                  value: _avatarCubit!,
+                  child: const AvatarPicker(),
                 ),
                 const SizedBox(height: 14),
                 FyInputCard(
@@ -216,15 +234,6 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                         ? null
                         : 'От 2 до 80 символов';
                   },
-                ),
-                const SizedBox(height: 10),
-                FyInputCard(
-                  label: 'HTTPS-ссылка на фото',
-                  icon: Icons.image_outlined,
-                  controller: _avatar,
-                  keyboardType: TextInputType.url,
-                  validator: _optionalHttps,
-                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
@@ -272,6 +281,13 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
               ],
             ),
           ),
+          if (widget.isTrainer) ...[
+            const SizedBox(height: 16),
+            BlocProvider.value(
+              value: _gymsCubit!,
+              child: GymsEditor(defaultCity: _city.text),
+            ),
+          ],
           const SizedBox(height: 16),
           FyCard(
             child: Column(
@@ -448,15 +464,6 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
       ),
     );
   }
-
-  String? _optionalHttps(String? value) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return null;
-    final uri = Uri.tryParse(text);
-    return uri?.scheme == 'https' && uri?.host.isNotEmpty == true
-        ? null
-        : 'Нужна корректная HTTPS-ссылка';
-  }
 }
 
 class _PortfolioEditor extends StatelessWidget {
@@ -481,7 +488,7 @@ class _PortfolioEditor extends StatelessWidget {
           ),
           IconButton(
             tooltip: 'Добавить работу',
-            onPressed: profile.portfolio.length >= 20
+            onPressed: profile.portfolio.length >= maxPortfolioPhotos
                 ? null
                 : () => _edit(context),
             icon: const Icon(Icons.add_circle_outline_rounded),
@@ -491,7 +498,7 @@ class _PortfolioEditor extends StatelessWidget {
       if (profile.portfolio.isEmpty)
         const FyCard(
           child: FyInfoBanner(
-            message: 'Добавьте до 20 работ в портфолио.',
+            message: 'Добавьте до $maxPortfolioPhotos фото в портфолио.',
             icon: Icons.collections_outlined,
           ),
         )

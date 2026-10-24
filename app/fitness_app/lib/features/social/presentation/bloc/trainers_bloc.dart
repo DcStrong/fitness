@@ -18,14 +18,26 @@ class TrainersStarted extends TrainersEvent {
 }
 
 class TrainersFiltersChanged extends TrainersEvent {
-  const TrainersFiltersChanged({this.query, this.specialty, this.mode});
+  const TrainersFiltersChanged({
+    this.query,
+    this.specialty,
+    this.mode,
+    this.district,
+    this.gymQuery,
+    this.gym,
+  });
 
   final String? query;
   final String? specialty;
   final String? mode;
+  final String? district;
+  final String? gymQuery;
+
+  /// Выбранный зал (фильтр по `gymId`); `null` сбрасывает фильтр.
+  final Gym? gym;
 
   @override
-  List<Object?> get props => [query, specialty, mode];
+  List<Object?> get props => [query, specialty, mode, district, gymQuery, gym];
 }
 
 class TrainersNextPageRequested extends TrainersEvent {
@@ -45,6 +57,9 @@ class TrainersState extends Equatable {
     this.query = '',
     this.specialty = '',
     this.mode,
+    this.district = '',
+    this.gymQuery = '',
+    this.gym,
     this.page = 0,
     this.totalPages = 0,
     this.loadingMore = false,
@@ -56,6 +71,9 @@ class TrainersState extends Equatable {
   final String query;
   final String specialty;
   final String? mode;
+  final String district;
+  final String gymQuery;
+  final Gym? gym;
   final int page;
   final int totalPages;
   final bool loadingMore;
@@ -70,6 +88,10 @@ class TrainersState extends Equatable {
     String? specialty,
     String? mode,
     bool clearMode = false,
+    String? district,
+    String? gymQuery,
+    Gym? gym,
+    bool clearGym = false,
     int? page,
     int? totalPages,
     bool? loadingMore,
@@ -81,6 +103,9 @@ class TrainersState extends Equatable {
     query: query ?? this.query,
     specialty: specialty ?? this.specialty,
     mode: clearMode ? null : mode ?? this.mode,
+    district: district ?? this.district,
+    gymQuery: gymQuery ?? this.gymQuery,
+    gym: clearGym ? null : gym ?? this.gym,
     page: page ?? this.page,
     totalPages: totalPages ?? this.totalPages,
     loadingMore: loadingMore ?? this.loadingMore,
@@ -94,6 +119,9 @@ class TrainersState extends Equatable {
     query,
     specialty,
     mode,
+    district,
+    gymQuery,
+    gym,
     page,
     totalPages,
     loadingMore,
@@ -136,6 +164,10 @@ class TrainersBloc extends Bloc<TrainersEvent, TrainersState> {
         specialty: event.specialty ?? state.specialty,
         mode: event.mode,
         clearMode: event.mode == null,
+        district: event.district,
+        gymQuery: event.gymQuery,
+        gym: event.gym,
+        clearGym: event.gym == null,
       ),
     );
     await _loadFirst(emit);
@@ -200,5 +232,8 @@ class TrainersBloc extends Bloc<TrainersEvent, TrainersState> {
     query: state.query,
     specialty: state.specialty,
     mode: state.mode,
+    gymId: state.gym?.id,
+    district: state.district,
+    gymQuery: state.gymQuery,
   );
 }

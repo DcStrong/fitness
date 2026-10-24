@@ -11,6 +11,7 @@ import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
 import '../widgets/safe_network_image.dart';
 import '../widgets/specialty_chips.dart';
+import '../widgets/trainer_gyms_list.dart';
 import '../../../../core/widgets/fy_top_bar.dart';
 
 class TrainerProfileScreen extends StatefulWidget {
@@ -136,6 +137,16 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                             specialties: trainer.specialties,
                             alignment: WrapAlignment.center,
                           ),
+                        ],
+                        if (trainer.gyms.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            'Залы',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          TrainerGymsList(gyms: trainer.gyms),
                         ],
                         const SizedBox(height: 18),
                         if (trainer.isLinked == true)
