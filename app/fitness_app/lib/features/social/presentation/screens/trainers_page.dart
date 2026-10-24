@@ -12,6 +12,7 @@ import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
 import '../bloc/trainers_bloc.dart';
 import '../widgets/safe_network_image.dart';
+import '../widgets/specialty_chips.dart';
 
 class TrainersPage extends StatelessWidget {
   const TrainersPage({super.key});
@@ -204,7 +205,7 @@ class _TrainerCard extends StatelessWidget {
               ],
               if (trainer.specialties.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(trainer.specialties.join(' · ')),
+                SpecialtyChips(specialties: trainer.specialties),
               ],
               const SizedBox(height: 8),
               Row(

@@ -130,7 +130,9 @@ class _AssignToStudentSheetState extends State<_AssignToStudentSheet> {
                     key: const Key('hub-assign-confirm'),
                     label: 'Назначить',
                     isLoading: _submitting,
-                    onPressed: _selected.isEmpty || _submitting ? null : _submit,
+                    onPressed: _selected.isEmpty || _submitting
+                        ? null
+                        : _submit,
                   ),
                 ],
               ),

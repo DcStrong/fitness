@@ -34,9 +34,7 @@ String formatSetsCompact({
   if (kind == 'duration') {
     final seconds = sets.first.durationSeconds ?? 0;
     final same = sets.every((set) => set.durationSeconds == seconds);
-    final head = same
-        ? '${sets.length}×$secondsс'
-        : '${sets.length} подходов';
+    final head = same ? '${sets.length}×$secondsс' : '${sets.length} подходов';
     return '$head$rest';
   }
   final reps = sets.first.reps ?? 0;

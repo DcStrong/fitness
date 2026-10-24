@@ -10,6 +10,7 @@ import '../../../schedule/presentation/schedule_format.dart';
 import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
 import '../widgets/safe_network_image.dart';
+import '../widgets/specialty_chips.dart';
 import '../../../../core/widgets/fy_top_bar.dart';
 
 class TrainerProfileScreen extends StatefulWidget {
@@ -131,13 +132,9 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                         ],
                         if (trainer.specialties.isNotEmpty) ...[
                           const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
+                          SpecialtyChips(
+                            specialties: trainer.specialties,
                             alignment: WrapAlignment.center,
-                            children: trainer.specialties
-                                .map((item) => Chip(label: Text(item)))
-                                .toList(),
                           ),
                         ],
                         const SizedBox(height: 18),
