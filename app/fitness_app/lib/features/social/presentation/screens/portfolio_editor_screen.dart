@@ -6,19 +6,29 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/fy_info_banner.dart';
 import '../../../../core/widgets/fy_primary_button.dart';
 import '../../../../core/widgets/fy_top_bar.dart';
-import '../../data/social_repository.dart';
 import '../../data/device_image_picker.dart';
+import '../../data/social_repository.dart';
+import '../controller/unsaved_changes_guard.dart';
 import '../helper/image_upload.helper.dart';
 import '../widgets/portfolio_photo_picker.dart';
 import '../widgets/safe_network_image.dart';
 
-/// Экран создания/редактирования работы портфолио. Закрывается с `true`,
-/// если работа сохранена.
+/// Экран создания/редактирования работы портфолио: одна запись — название,
+/// описание и до 5 фото (лимит 5 фото считается по всему портфолио).
+/// Закрывается с `true`, если работа сохранена.
 class PortfolioEditorScreen extends StatefulWidget {
-  const PortfolioEditorScreen({this.itemId, this.photoPicker, super.key});
+  const PortfolioEditorScreen({
+    this.itemId,
+    this.photoPicker,
+    this.guard,
+    super.key,
+  });
 
   final String? itemId;
   final PortfolioPhotoPicker? photoPicker;
+
+  /// Сторож несохранённых изменений (его же использует `GoRoute.onExit`).
+  final UnsavedChangesGuard? guard;
 
   @override
   State<PortfolioEditorScreen> createState() => _PortfolioEditorScreenState();
@@ -32,31 +42,46 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _uploading = false;
-  int _existingCount = 0;
+  int _otherPhotos = 0;
+  String _baseline = '';
   String? _error;
+  late final UnsavedChangesGuard _guard = widget.guard ?? UnsavedChangesGuard();
+
+  bool get _isNew => widget.itemId == null;
+
+  /// Сколько фото ещё можно добавить: лимит считается по сумме фото всего
+  /// портфолио (в других записях уже [_otherPhotos]).
+  int get _freeSlots => (maxPortfolioPhotos - _otherPhotos - _photos.length)
+      .clamp(0, maxPortfolioPhotos);
 
   @override
   void initState() {
     super.initState();
+    _title.addListener(_recompute);
+    _description.addListener(_recompute);
+    _guard.attach(save: _save);
     _load();
   }
 
-  bool get _isNew => widget.itemId == null;
-
-  /// Сколько фото ещё можно добавить: у новой работы — свободные места в
-  /// портфолио (каждое фото станет отдельной работой), у существующей — одно.
-  int get _freeSlots => _isNew
-      ? (maxPortfolioPhotos - _existingCount - _photos.length).clamp(
-          0,
-          maxPortfolioPhotos,
-        )
-      : (1 - _photos.length).clamp(0, 1);
-
   @override
   void dispose() {
+    _guard.detach();
     _title.dispose();
     _description.dispose();
     super.dispose();
+  }
+
+  String _snapshot() =>
+      [_title.text.trim(), _description.text.trim(), ..._photos].join('\u0001');
+
+  void _recompute() {
+    if (_loading) return;
+    _guard.setDirty(_snapshot() != _baseline);
+  }
+
+  void _markClean() {
+    _baseline = _snapshot();
+    _guard.setDirty(false);
   }
 
   Future<void> _load() async {
@@ -66,29 +91,31 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
     });
     try {
       final profile = await context.read<SocialRepository>().getOwnProfile();
-      _existingCount = profile.portfolio.length;
-      if (_isNew) {
-        if (!mounted) return;
-        setState(() => _loading = false);
-        return;
-      }
-      final item = profile.portfolio
-          .where((entry) => entry.id == widget.itemId)
-          .firstOrNull;
+      _otherPhotos = profile.portfolio
+          .where((entry) => entry.id != widget.itemId)
+          .fold(0, (sum, entry) => sum + entry.imageUrls.length);
+      final item = _isNew
+          ? null
+          : profile.portfolio
+                .where((entry) => entry.id == widget.itemId)
+                .firstOrNull;
       if (!mounted) return;
-      if (item == null) {
+      if (!_isNew && item == null) {
         setState(() {
           _loading = false;
           _error = 'Работа не найдена';
         });
         return;
       }
-      _title.text = item.title;
-      _description.text = item.description ?? '';
-      _photos
-        ..clear()
-        ..addAll([if (item.imageUrl?.isNotEmpty == true) item.imageUrl!]);
+      if (item != null) {
+        _title.text = item.title;
+        _description.text = item.description ?? '';
+        _photos
+          ..clear()
+          ..addAll(item.imageUrls);
+      }
       setState(() => _loading = false);
+      _markClean();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -98,7 +125,7 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
     }
   }
 
-  Future<void> _addPhoto() async {
+  Future<void> _addPhotos() async {
     if (_uploading) return;
     final picker =
         widget.photoPicker ??
@@ -117,6 +144,7 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
         _uploading = false;
         _photos.addAll(urls);
       });
+      _recompute();
     } on PhotoPickException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -126,8 +154,13 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
     }
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<bool> _save() async {
+    if (!_formKey.currentState!.validate()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) scrollToFirstFormError(_formKey.currentContext!);
+      });
+      return false;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -140,40 +173,48 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
           id: id,
           title: _title.text.trim(),
           description: _description.text,
-          imageUrl: _photos.firstOrNull ?? '',
+          imageUrls: [..._photos],
         );
       } else {
-        // На бэкенде одна работа — одно фото: каждое выбранное фото
-        // сохраняется отдельной работой с общими названием и описанием.
-        final urls = _photos.isEmpty ? <String?>[null] : [..._photos];
-        for (final url in urls) {
-          await repository.createPortfolioItem(
-            title: _title.text.trim(),
-            description: _description.text,
-            imageUrl: url,
-          );
-          if (url != null) _photos.remove(url);
-          _existingCount++;
-        }
+        await repository.createPortfolioItem(
+          title: _title.text.trim(),
+          description: _description.text,
+          imageUrls: [..._photos],
+        );
       }
-      if (!mounted) return;
+      if (!mounted) return true;
+      _markClean();
       context.pop(true);
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _saving = false;
         _error = uploadErrorMessage(error);
       });
+      return false;
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _guard,
+    builder: (context, _) => PopScope(
+      canPop: !_guard.dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (await _guard.confirmLeave(context) && context.mounted) {
+          context.pop();
+        }
+      },
+      child: _buildScaffold(context),
+    ),
+  );
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: FyTopBar(
-        title: widget.itemId == null ? 'Новая работа' : 'Изменить работу',
-      ),
+      appBar: FyTopBar(title: _isNew ? 'Новая работа' : 'Изменить работу'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
@@ -185,28 +226,29 @@ class _PortfolioEditorScreenState extends State<PortfolioEditorScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                   children: [
                     Text(
-                      _isNew
-                          ? 'Фото (${_photos.length}, можно ещё $_freeSlots)'
-                          : 'Фото',
+                      'Фото (${_photos.length}, можно ещё $_freeSlots)',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    if (_isNew && _photos.length > 1) ...[
-                      const Text(
-                        'Каждое фото сохранится отдельной работой '
-                        'с этим названием и описанием.',
+                    const SizedBox(height: 4),
+                    Text(
+                      'Лимит 5 фото на всё портфолио. JPEG, PNG или WebP, '
+                      'до 5 МБ каждое, до 25 МБ за раз.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textMuted,
                       ),
-                      const SizedBox(height: 10),
-                    ],
+                    ),
+                    const SizedBox(height: 10),
                     _PhotoGrid(
                       photos: _photos,
                       canAdd: _freeSlots > 0,
                       uploading: _uploading,
-                      onAdd: _addPhoto,
-                      onRemove: (index) =>
-                          setState(() => _photos.removeAt(index)),
+                      onAdd: _addPhotos,
+                      onRemove: (index) {
+                        setState(() => _photos.removeAt(index));
+                        _recompute();
+                      },
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -276,6 +318,7 @@ class _PhotoGrid extends StatelessWidget {
       children: [
         for (final (index, url) in photos.indexed)
           Stack(
+            key: ValueKey('portfolio-photo-$index'),
             fit: StackFit.expand,
             children: [
               ClipRRect(
@@ -298,6 +341,7 @@ class _PhotoGrid extends StatelessWidget {
           const Center(child: CircularProgressIndicator())
         else if (canAdd)
           InkWell(
+            key: const Key('portfolio-add-photo'),
             onTap: onAdd,
             borderRadius: BorderRadius.circular(12),
             child: Container(

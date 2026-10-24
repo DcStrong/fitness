@@ -17,7 +17,7 @@ describe('MediaService', () => {
     put: jest.fn(async ({ key }: { key: string; }) => `https://cdn.test/${key}`),
     isOwnUrl: jest.fn(),
   };
-  const portfolio = { countByCoachId: jest.fn() };
+  const portfolio = { countPhotosByCoachId: jest.fn() };
   const service = new MediaService(
     storage as unknown as StoragePort,
     portfolio as unknown as TrainerPortfolioRepository,
@@ -25,7 +25,7 @@ describe('MediaService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    portfolio.countByCoachId.mockResolvedValue(0);
+    portfolio.countPhotosByCoachId.mockResolvedValue(0);
   });
 
   it.each([
@@ -98,7 +98,7 @@ describe('MediaService', () => {
     });
 
     it('учитывает уже имеющиеся фото портфолио', async () => {
-      portfolio.countByCoachId.mockResolvedValue(4);
+      portfolio.countPhotosByCoachId.mockResolvedValue(4);
 
       await expect(
         service.uploadPortfolioImages({ ownerId: 'u', buffers: [JPEG, JPEG] }),
@@ -114,7 +114,7 @@ describe('MediaService', () => {
 
     it('отклоняет сумму больше 25 МБ кодом IMAGES_TOTAL_TOO_LARGE', async () => {
       // число файлов обходим моком свободных мест, чтобы сработала именно проверка суммы
-      portfolio.countByCoachId.mockResolvedValue(-1);
+      portfolio.countPhotosByCoachId.mockResolvedValue(-1);
       const buffers = Array.from({ length: 6 }, () => sized(MAX_IMAGE_BYTES));
 
       await expect(

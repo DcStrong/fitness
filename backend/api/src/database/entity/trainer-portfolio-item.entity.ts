@@ -29,8 +29,9 @@ export class TrainerPortfolioItemEntity {
   @Column({ type: 'varchar', length: 1000, nullable: true })
   description!: string | null;
 
-  @Column({ name: 'image_url', type: 'varchar', length: 2048, nullable: true })
-  imageUrl!: string | null;
+  /** Фото работы (до 5 на всё портфолио тренера), порядок = порядок показа. */
+  @Column({ name: 'image_urls', type: 'text', array: true, default: () => `'{}'` })
+  imageUrls!: string[];
 
   @Column({ name: 'sort_order', type: 'integer' })
   sortOrder!: number;

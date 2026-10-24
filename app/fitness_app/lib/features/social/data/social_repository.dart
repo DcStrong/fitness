@@ -59,11 +59,11 @@ class SocialRepository {
   Future<PortfolioItem> createPortfolioItem({
     required String title,
     String? description,
-    String? imageUrl,
+    List<String> imageUrls = const [],
   }) => _request(
     () => _dio.post<dynamic>(
       '/profiles/me/portfolio',
-      data: _portfolioData(title, description, imageUrl),
+      data: _portfolioData(title, description, imageUrls),
     ),
     (data) => PortfolioItem.fromJson(_map(data)),
   );
@@ -72,11 +72,11 @@ class SocialRepository {
     required String id,
     required String title,
     String? description,
-    String? imageUrl,
+    List<String> imageUrls = const [],
   }) => _request(
     () => _dio.put<dynamic>(
       '/profiles/me/portfolio/$id',
-      data: _portfolioData(title, description, imageUrl),
+      data: _portfolioData(title, description, imageUrls),
     ),
     (data) => PortfolioItem.fromJson(_map(data)),
   );
@@ -277,11 +277,11 @@ class SocialRepository {
   Map<String, dynamic> _portfolioData(
     String title,
     String? description,
-    String? imageUrl,
+    List<String> imageUrls,
   ) => {
     'title': title.trim(),
     'description': _nullable(description),
-    'imageUrl': _nullable(imageUrl),
+    'imageUrls': imageUrls,
   };
 
   String? _nullable(String? value) {

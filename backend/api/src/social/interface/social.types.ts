@@ -36,7 +36,7 @@ export interface PortfolioItemModel {
   id: string;
   title: string;
   description: string | null;
-  imageUrl: string | null;
+  imageUrls: string[];
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;

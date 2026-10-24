@@ -206,6 +206,40 @@ describe('Загрузка изображений и лимит портфоли
     });
   });
 
+  it('хранит несколько фото в одной записи и считает лимит по сумме фото', async () => {
+    const urls = (n: number): string[] => Array.from({ length: n }, (_, i) => `${STORAGE_BASE}/images/u/${i}.jpg`);
+    const post = (imageUrls: string[]): request.Test => request(app.getHttpServer())
+      .post('/profiles/me/portfolio')
+      .set('Authorization', `Bearer ${trainerToken}`)
+      .send({ title: 'Работы', imageUrls });
+
+    const first = await post(urls(3)).expect(201);
+    expect(first.body.imageUrls).toEqual(urls(3));
+    expect(first.body.imageUrl).toBe(urls(3)[0]);
+
+    const over = await post(urls(3)).expect(409);
+    expect(over.body.code).toBe('PORTFOLIO_LIMIT_REACHED');
+
+    const upload = await request(app.getHttpServer())
+      .post('/media/portfolio-images')
+      .set('Authorization', `Bearer ${trainerToken}`)
+      .attach('files', SMALL, 'a.jpg')
+      .attach('files', SMALL, 'b.jpg')
+      .attach('files', SMALL, 'c.jpg');
+    expect(upload.status).toBe(409);
+
+    await request(app.getHttpServer())
+      .put(`/profiles/me/portfolio/${first.body.id as string}`)
+      .set('Authorization', `Bearer ${trainerToken}`)
+      .send({ title: 'Работы', imageUrls: urls(5) })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/profiles/me/portfolio/${first.body.id as string}`)
+      .set('Authorization', `Bearer ${trainerToken}`)
+      .expect(204);
+  });
+
   it('ограничивает портфолио пятью фото и возвращает PORTFOLIO_LIMIT_REACHED', async () => {
     /**
      *

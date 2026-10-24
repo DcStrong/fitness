@@ -248,7 +248,7 @@ class _TrainerCard extends StatelessWidget {
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
-              if (trainer.city case final city?) ...[
+              if (trainer.displayCity case final city?) ...[
                 const SizedBox(height: 3),
                 Text(city, style: const TextStyle(color: AppColors.textMuted)),
               ],

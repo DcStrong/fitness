@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -12,22 +13,29 @@ import '../../../../core/widgets/fy_primary_button.dart';
 import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
 import '../../data/device_image_picker.dart';
+import '../controller/unsaved_changes_guard.dart';
 import '../cubit/avatar_upload_cubit.dart';
 import '../cubit/gyms_cubit.dart';
 import '../helper/image_upload.helper.dart';
 import '../helper/phone_mask.helper.dart';
 import 'avatar_picker.dart';
 import 'gyms_editor.dart';
+import 'safe_network_image.dart';
 import 'specialty_tags_field.dart';
 
 class SocialProfileEditor extends StatefulWidget {
   const SocialProfileEditor({
     required this.isTrainer,
     this.devicePicker = const ImagePickerDeviceImagePicker(),
+    this.guard,
     super.key,
   });
 
   final bool isTrainer;
+
+  /// Если задан, сохранение и «есть изменения» отдаются наружу (закреплённая
+  /// кнопка и диалог при уходе), а встроенная кнопка не показывается.
+  final UnsavedChangesGuard? guard;
   final DeviceImagePicker devicePicker;
 
   @override
@@ -40,7 +48,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
   AvatarUploadCubit? _avatarCubit;
   GymsCubit? _gymsCubit;
   final _bio = TextEditingController();
-  final _city = TextEditingController();
+  final _gymsKey = GlobalKey<GymsEditorState>();
   final _specialtiesKey = GlobalKey<SpecialtyTagsFieldState>();
   List<String> _specialties = [];
   final _phone = TextEditingController();
@@ -48,6 +56,8 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
   final Set<PreferredContactChannel> _preferredChannels = {};
   ProfilePrivacy _privacy = const ProfilePrivacy();
   OwnerProfile? _profile;
+  _FormSnapshot? _baseline;
+  StreamSubscription<AvatarUploadState>? _avatarSub;
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -55,16 +65,21 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
   @override
   void initState() {
     super.initState();
+    for (final controller in [_name, _bio, _phone, _telegram]) {
+      controller.addListener(_recompute);
+    }
+    widget.guard?.attach(save: _save);
     _load();
   }
 
   @override
   void dispose() {
+    widget.guard?.detach();
+    unawaited(_avatarSub?.cancel());
     _name.dispose();
     unawaited(_avatarCubit?.close());
     unawaited(_gymsCubit?.close());
     _bio.dispose();
-    _city.dispose();
     _phone.dispose();
     _telegram.dispose();
     super.dispose();
@@ -88,8 +103,9 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
         initialUrl: profile.avatarUrl,
       );
       _gymsCubit = GymsCubit(repository: repository, initial: profile.gyms);
+      unawaited(_avatarSub?.cancel());
+      _avatarSub = _avatarCubit!.stream.listen((_) => _recompute());
       _bio.text = profile.bio ?? '';
-      _city.text = profile.city ?? '';
       _specialties = [...profile.specialties];
       _phone.text = formatRuPhone(profile.phone ?? '');
       _telegram.text = profile.telegramUsername ?? '';
@@ -101,6 +117,7 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
         _privacy = profile.privacy;
         _loading = false;
       });
+      _markClean();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -110,9 +127,58 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
     }
   }
 
-  Future<void> _save() async {
+  _FormSnapshot _snapshot() => _FormSnapshot(
+    name: _name.text.trim(),
+    bio: _bio.text.trim(),
+    avatarUrl: _avatarCubit?.state.avatarUrl ?? '',
+    specialties: _specialties,
+    trainingModes: [...?_profile?.trainingModes]..sort(),
+    phone: normalizeRuPhone(_phone.text) ?? _phone.text.trim(),
+    telegram: _telegram.text.trim(),
+    channels: (_preferredChannels.map((channel) => channel.name).toList()
+      ..sort()),
+    privacy: _privacy,
+    hasPendingGym: _gymsKey.currentState?.hasInput ?? false,
+  );
+
+  void _markClean() {
+    _baseline = _snapshot();
+    widget.guard?.setDirty(false);
+  }
+
+  /// Сравнивает форму с загруженным профилем и сообщает «есть изменения».
+  void _recompute() {
+    final baseline = _baseline;
+    if (baseline == null || _loading) return;
+    widget.guard?.setDirty(_snapshot() != baseline);
+  }
+
+  /// Подтягивает только портфолио: изменения формы профиля не сбрасываются.
+  Future<void> _refreshPortfolio() async {
+    try {
+      final fresh = await context.read<SocialRepository>().getOwnProfile();
+      if (!mounted || _profile == null) return;
+      setState(() => _profile = _profile!.copyWith(portfolio: fresh.portfolio));
+    } catch (_) {}
+  }
+
+  /// Сохраняет профиль; `true` — сохранено.
+  Future<bool> _save() async {
     _specialtiesKey.currentState?.commitPending();
-    if (!_formKey.currentState!.validate()) return;
+    final gymsState = _gymsKey.currentState;
+    if (!_formKey.currentState!.validate()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) scrollToFirstFormError(_formKey.currentContext!);
+      });
+      return false;
+    }
+    if (gymsState != null && gymsState.hasInput && !await gymsState.submit()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) scrollToFirstFormError(_formKey.currentContext!);
+      });
+      return false;
+    }
+    if (!mounted) return false;
     setState(() {
       _saving = true;
       _error = null;
@@ -123,7 +189,9 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
         displayName: _name.text,
         avatarUrl: _avatarCubit?.state.avatarUrl,
         bio: _bio.text,
-        city: widget.isTrainer ? _city.text : null,
+        // Город в форме не редактируется (его заменили залы), но уже
+        // сохранённое значение не теряем.
+        city: widget.isTrainer ? _profile?.city : null,
         specialties: widget.isTrainer ? _specialties : const [],
         trainingModes: widget.isTrainer
             ? [
@@ -140,52 +208,41 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
       final profile = await repository.updatePrivacy(
         widget.isTrainer ? _privacy : _privacy.copyWith(isDiscoverable: false),
       );
-      if (!mounted) return;
+      if (!mounted) return true;
       setState(() {
         _profile = profile;
         _privacy = profile.privacy;
         _saving = false;
       });
+      _markClean();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Профиль сохранён')));
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _saving = false;
         _error = error.toString();
       });
+      return false;
     }
   }
 
   void _toggleMode(String mode, bool selected) {
     final modes = [...?_profile?.trainingModes];
     selected ? modes.add(mode) : modes.remove(mode);
-    setState(() {
-      _profile = OwnerProfile(
-        userId: _profile?.userId ?? '',
-        displayName: _profile?.displayName,
-        avatarUrl: _profile?.avatarUrl,
-        bio: _profile?.bio,
-        city: _profile?.city,
-        specialties: _profile?.specialties ?? const [],
-        trainingModes: modes.toSet().toList(),
-        phone: _profile?.phone,
-        telegramUsername: _profile?.telegramUsername,
-        preferredContactChannels:
-            _profile?.preferredContactChannels ?? const [],
-        email: _profile?.email ?? '',
-        privacy: _privacy,
-        portfolio: _profile?.portfolio ?? const [],
-        gyms: _profile?.gyms ?? const [],
-        averageRating: _profile?.averageRating,
-        reviewCount: _profile?.reviewCount ?? 0,
-      );
-    });
+    setState(
+      () =>
+          _profile = _profile?.copyWith(trainingModes: modes.toSet().toList()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _recompute();
+    });
     if (_loading) {
       return const FyCard(child: Center(child: CircularProgressIndicator()));
     }
@@ -247,19 +304,13 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
                 ),
                 if (widget.isTrainer) ...[
                   const SizedBox(height: 10),
-                  FyInputCard(
-                    label: 'Город',
-                    icon: Icons.location_city_outlined,
-                    controller: _city,
-                    validator: (value) => (value?.length ?? 0) <= 120
-                        ? null
-                        : 'Не более 120 символов',
-                  ),
-                  const SizedBox(height: 10),
                   SpecialtyTagsField(
                     key: _specialtiesKey,
                     tags: _specialties,
-                    onChanged: (tags) => _specialties = tags,
+                    onChanged: (tags) {
+                      _specialties = tags;
+                      _recompute();
+                    },
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -285,7 +336,11 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
             const SizedBox(height: 16),
             BlocProvider.value(
               value: _gymsCubit!,
-              child: GymsEditor(defaultCity: _city.text),
+              child: GymsEditor(
+                key: _gymsKey,
+                defaultCity: _profile?.city,
+                onInputChanged: _recompute,
+              ),
             ),
           ],
           const SizedBox(height: 16),
@@ -444,12 +499,14 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
             const SizedBox(height: 12),
             FyInfoBanner(message: _error!, icon: Icons.error_outline_rounded),
           ],
-          const SizedBox(height: 16),
-          FyPrimaryButton(
-            label: 'Сохранить профиль',
-            isLoading: _saving,
-            onPressed: _save,
-          ),
+          if (widget.guard == null) ...[
+            const SizedBox(height: 16),
+            FyPrimaryButton(
+              label: 'Сохранить профиль',
+              isLoading: _saving,
+              onPressed: _save,
+            ),
+          ],
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => context.push('/reviews'),
@@ -458,12 +515,52 @@ class _SocialProfileEditorState extends State<SocialProfileEditor> {
           ),
           if (widget.isTrainer) ...[
             const SizedBox(height: 20),
-            _PortfolioEditor(profile: _profile!, onChanged: _load),
+            _PortfolioEditor(profile: _profile!, onChanged: _refreshPortfolio),
           ],
         ],
       ),
     );
   }
+}
+
+class _FormSnapshot extends Equatable {
+  const _FormSnapshot({
+    required this.name,
+    required this.bio,
+    required this.avatarUrl,
+    required this.specialties,
+    required this.trainingModes,
+    required this.phone,
+    required this.telegram,
+    required this.channels,
+    required this.privacy,
+    required this.hasPendingGym,
+  });
+
+  final String name;
+  final String bio;
+  final String avatarUrl;
+  final List<String> specialties;
+  final List<String> trainingModes;
+  final String phone;
+  final String telegram;
+  final List<String> channels;
+  final ProfilePrivacy privacy;
+  final bool hasPendingGym;
+
+  @override
+  List<Object?> get props => [
+    name,
+    bio,
+    avatarUrl,
+    specialties,
+    trainingModes,
+    phone,
+    telegram,
+    channels,
+    privacy,
+    hasPendingGym,
+  ];
 }
 
 class _PortfolioEditor extends StatelessWidget {
@@ -511,10 +608,32 @@ class _PortfolioEditor extends StatelessWidget {
             child: FyCard(
               child: Row(
                 children: [
+                  if (item.imageUrls.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SafeNetworkImage(
+                        url: item.imageUrls.first,
+                        width: 44,
+                        height: 44,
+                        icon: Icons.image_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
                   Expanded(
-                    child: Text(
-                      item.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        if (item.imageUrls.isNotEmpty)
+                          Text(
+                            'Фото: ${item.imageUrls.length}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
                     ),
                   ),
                   IconButton(

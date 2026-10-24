@@ -54,6 +54,8 @@ export interface PaginationParams {
 export interface CreatePortfolioItemParams {
   title: string;
   description?: string | null;
+  imageUrls?: string[];
+  /** Устаревшее одиночное фото, учитывается если `imageUrls` не задан. */
   imageUrl?: string | null;
 }
 
@@ -63,6 +65,8 @@ export interface CreatePortfolioItemParams {
 export interface UpdatePortfolioItemParams {
   title: string;
   description?: string | null;
+  imageUrls?: string[];
+  /** Устаревшее одиночное фото, учитывается если `imageUrls` не задан. */
   imageUrl?: string | null;
 }
 

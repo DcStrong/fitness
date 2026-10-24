@@ -10,6 +10,8 @@ import '../../../invitations/data/invitation_models.dart';
 import '../../../invitations/data/invitations_repository.dart';
 import '../../../more/presentation/more_page.dart';
 import '../../../social/data/social_repository.dart';
+import '../../../../core/widgets/fy_primary_button.dart';
+import '../../../social/presentation/controller/unsaved_changes_guard.dart';
 import '../../../social/presentation/widgets/social_profile_editor.dart';
 import '../../data/auth_models.dart';
 import '../cubit/auth_cubit.dart';
@@ -18,7 +20,10 @@ import '../cubit/auth_state.dart';
 /// Profile (DS v2): who you are, your coach, shortcuts, the public profile
 /// form and sign-out.
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({this.guard, super.key});
+
+  /// Сторож несохранённых изменений формы; общий с `GoRoute.onExit`.
+  final UnsavedChangesGuard? guard;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
             if (user == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            return _ProfileBody(user: user);
+            return _ProfileBody(user: user, guard: guard);
           },
         ),
       ),
@@ -40,15 +45,17 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _ProfileBody extends StatefulWidget {
-  const _ProfileBody({required this.user});
+  const _ProfileBody({required this.user, this.guard});
 
   final AuthUser user;
+  final UnsavedChangesGuard? guard;
 
   @override
   State<_ProfileBody> createState() => _ProfileBodyState();
 }
 
 class _ProfileBodyState extends State<_ProfileBody> {
+  late final UnsavedChangesGuard _guard = widget.guard ?? UnsavedChangesGuard();
   String? _displayName;
   List<RelationshipItem> _coaches = const [];
 
@@ -107,7 +114,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
       ),
     ];
 
-    return ListView(
+    final content = ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         Row(
@@ -211,7 +218,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         const SizedBox(height: 16),
         MoreMenuGroup(items: shortcuts),
         const SizedBox(height: 24),
-        SocialProfileEditor(isTrainer: _isTrainer),
+        SocialProfileEditor(isTrainer: _isTrainer, guard: _guard),
         const SizedBox(height: 24),
         OutlinedButton.icon(
           key: const Key('profile-logout'),
@@ -225,5 +232,49 @@ class _ProfileBodyState extends State<_ProfileBody> {
         ),
       ],
     );
+
+    return ListenableBuilder(
+      listenable: _guard,
+      builder: (context, _) => PopScope(
+        canPop: !_guard.dirty,
+        onPopInvokedWithResult: (didPop, _) async {
+          if (didPop) return;
+          if (await _guard.confirmLeave(context) && context.mounted) {
+            context.pop();
+          }
+        },
+        child: Column(
+          children: [
+            Expanded(child: content),
+            _SaveBar(guard: _guard),
+          ],
+        ),
+      ),
+    );
   }
+}
+
+/// Закреплённая над нижней навигацией кнопка сохранения профиля: активна
+/// только при несохранённых изменениях.
+class _SaveBar extends StatelessWidget {
+  const _SaveBar({required this.guard});
+
+  final UnsavedChangesGuard guard;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: const Border(top: BorderSide(color: AppColors.border)),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+      child: FyPrimaryButton(
+        key: const Key('profile-save'),
+        label: guard.dirty ? 'Сохранить профиль' : 'Нет изменений',
+        isLoading: guard.saving,
+        onPressed: guard.canSave ? guard.save : null,
+      ),
+    ),
+  );
 }

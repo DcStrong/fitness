@@ -17,6 +17,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { IsMediaUrl } from '../../storage/validator/is-media-url.validator';
+import { MAX_PORTFOLIO_PHOTOS } from '../../media/media.constants';
 import { MAX_PORTFOLIO_ITEMS } from '../social.constants';
 import type { PreferredContactChannel, TrainingMode } from '../interface';
 
@@ -146,6 +147,15 @@ export class SavePortfolioItemDto {
   @MaxLength(1000)
   description?: string | null;
 
+  /** Фото работы; всего в портфолио не больше MAX_PORTFOLIO_PHOTOS. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_PORTFOLIO_PHOTOS)
+  @IsMediaUrl({ each: true })
+  @MaxLength(2048, { each: true })
+  imageUrls?: string[];
+
+  /** Устаревшее одиночное фото; используется, только если `imageUrls` не передан. */
   @IsOptional()
   @IsMediaUrl()
   @MaxLength(2048)
