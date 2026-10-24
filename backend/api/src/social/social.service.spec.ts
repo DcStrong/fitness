@@ -25,7 +25,6 @@ describe('Сервис социальных профилей', () => {
   const portfolio = {
     findByCoachId: jest.fn(),
     countByCoachId: jest.fn(),
-    countPhotosByCoachId: jest.fn(),
     create: jest.fn((data: object) => data),
     save: jest.fn((data: object) => Promise.resolve({ id: 'item-1', createdAt: new Date(), updatedAt: new Date(), ...data })),
     findById: jest.fn(),
@@ -178,34 +177,36 @@ describe('Сервис социальных профилей', () => {
     });
 
     it('сохраняет несколько фото в одной записи', async () => {
-      portfolio.countPhotosByCoachId.mockResolvedValue(2);
-
       const item = await service.createPortfolioItem(trainer, { title: 'Работы', imageUrls: urls(3) });
 
       expect(item.imageUrls).toEqual(urls(3));
     });
 
-    it('отклоняет запись, если сумма фото по портфолио больше 5', async () => {
-      portfolio.countPhotosByCoachId.mockResolvedValue(3);
+    it('в другой записи тоже можно до 5 фото: записи не влияют друг на друга', async () => {
+      const first = await service.createPortfolioItem(trainer, { title: 'Первая', imageUrls: urls(5) });
+      const second = await service.createPortfolioItem(trainer, { title: 'Вторая', imageUrls: urls(5) });
 
-      await expect(
-        service.createPortfolioItem(trainer, { title: 'Работы', imageUrls: urls(3) }),
-      ).rejects.toMatchObject({ response: { code: 'PORTFOLIO_LIMIT_REACHED' } });
+      expect(first.imageUrls).toHaveLength(5);
+      expect(second.imageUrls).toHaveLength(5);
     });
 
-    it('при обновлении не считает фото самой записи', async () => {
-      portfolio.findById.mockResolvedValue({ id: 'item-1', coachId: 'trainer-1', title: 'a', description: null, imageUrls: urls(4), sortOrder: 0 });
-      portfolio.countPhotosByCoachId.mockResolvedValue(1);
+    it('отклоняет шестое фото в одной записи кодом PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED', async () => {
+      await expect(
+        service.createPortfolioItem(trainer, { title: 'Работы', imageUrls: urls(6) }),
+      ).rejects.toMatchObject({ response: { code: 'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED' } });
+    });
 
-      const item = await service.updatePortfolioItem(trainer, 'item-1', { title: 'a', imageUrls: urls(4) });
+    it('при обновлении тоже не больше 5 фото в записи', async () => {
+      portfolio.findById.mockResolvedValue({ id: 'item-1', coachId: 'trainer-1', title: 'a', description: null, imageUrls: urls(2), sortOrder: 0 });
 
-      expect(portfolio.countPhotosByCoachId).toHaveBeenCalledWith('trainer-1', 'item-1');
-      expect(item.imageUrls).toHaveLength(4);
+      await expect(
+        service.updatePortfolioItem(trainer, 'item-1', { title: 'a', imageUrls: urls(6) }),
+      ).rejects.toMatchObject({ response: { code: 'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED' } });
+      const item = await service.updatePortfolioItem(trainer, 'item-1', { title: 'a', imageUrls: urls(5) });
+      expect(item.imageUrls).toHaveLength(5);
     });
 
     it('принимает устаревший imageUrl как одно фото', async () => {
-      portfolio.countPhotosByCoachId.mockResolvedValue(0);
-
       const item = await service.createPortfolioItem(trainer, { title: 'a', imageUrl: 'https://example.com/x.jpg' });
 
       expect(item.imageUrls).toEqual(['https://example.com/x.jpg']);

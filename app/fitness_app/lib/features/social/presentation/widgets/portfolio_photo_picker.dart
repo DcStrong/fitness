@@ -43,7 +43,7 @@ class DevicePortfolioPhotoPicker implements PortfolioPhotoPicker {
   }) async {
     if (maxCount <= 0) {
       throw PhotoPickException(
-        'Достигнут лимит: не больше $maxPortfolioPhotos фото в портфолио',
+        'Достигнут лимит: не больше $maxPhotosPerItem фото в одной работе',
       );
     }
     try {

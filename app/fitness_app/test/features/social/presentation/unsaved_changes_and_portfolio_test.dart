@@ -66,16 +66,6 @@ void main() {
       expect(legacy.imageUrls, ['old']);
       expect(PortfolioItem.fromJson(const {'title': 'a'}).imageUrls, isEmpty);
     });
-
-    test('OwnerProfile counts photos across items', () {
-      final profile = _profile(
-        portfolio: const [
-          PortfolioItem(title: 'a', imageUrls: ['1', '2'], sortOrder: 0),
-          PortfolioItem(title: 'b', imageUrls: ['3'], sortOrder: 1),
-        ],
-      );
-      expect(profile.portfolioPhotoCount, 3);
-    });
   });
 
   group('UnsavedChangesGuard dialog', () {
@@ -320,12 +310,12 @@ void main() {
       final picker = _FakePhotoPicker(['u1', 'u2', 'u3']);
       await pump(tester, picker);
 
-      expect(find.textContaining('можно ещё 5'), findsOneWidget);
+      expect(find.text('Фото: 0 из 5'), findsOneWidget);
       await tester.tap(find.byKey(const Key('portfolio-add-photo')));
       await tester.pumpAndSettle();
       expect(picker.lastMaxCount, 5);
       expect(find.byKey(const ValueKey('portfolio-photo-2')), findsOneWidget);
-      expect(find.textContaining('можно ещё 2'), findsOneWidget);
+      expect(find.text('Фото: 3 из 5'), findsOneWidget);
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Название'),
@@ -343,29 +333,47 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('лимит считается по фото других записей', (tester) async {
+    testWidgets('лимит фото на каждую запись независим от других', (
+      tester,
+    ) async {
       when(() => repository.getOwnProfile()).thenAnswer(
         (_) async => _profile(
           portfolio: const [
             PortfolioItem(
               id: 'a',
               title: 'a',
-              imageUrls: ['1', '2', '3', '4'],
+              imageUrls: ['1', '2', '3', '4', '5'],
               sortOrder: 0,
             ),
           ],
         ),
       );
-      final picker = _FakePhotoPicker(['u1', 'u2', 'u3']);
+      final picker = _FakePhotoPicker(['u1', 'u2', 'u3', 'u4', 'u5', 'u6']);
       await pump(tester, picker);
 
-      expect(find.textContaining('можно ещё 1'), findsOneWidget);
+      // в другой записи уже 5 фото, но в новой можно снова до 5
+      expect(find.text('Фото: 0 из 5'), findsOneWidget);
       await tester.tap(find.byKey(const Key('portfolio-add-photo')));
       await tester.pumpAndSettle();
 
-      expect(picker.lastMaxCount, 1);
-      expect(find.textContaining('можно ещё 0'), findsOneWidget);
+      expect(picker.lastMaxCount, 5);
+      expect(find.text('Фото: 5 из 5'), findsOneWidget);
       expect(find.byKey(const Key('portfolio-add-photo')), findsNothing);
+    });
+
+    testWidgets('после 2 фото можно добавить ещё 3 в этой же записи', (
+      tester,
+    ) async {
+      final picker = _FakePhotoPicker(['u1', 'u2']);
+      await pump(tester, picker);
+
+      await tester.tap(find.byKey(const Key('portfolio-add-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('portfolio-add-photo')));
+      await tester.pumpAndSettle();
+
+      expect(picker.lastMaxCount, 3);
+      expect(find.text('Фото: 4 из 5'), findsOneWidget);
     });
 
     testWidgets('при несохранённых изменениях back показывает диалог', (

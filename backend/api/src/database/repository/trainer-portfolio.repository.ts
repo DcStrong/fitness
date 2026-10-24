@@ -67,22 +67,6 @@ export class TrainerPortfolioRepository {
   }
 
   /**
-   * Сколько фото уже в портфолио тренера (сумма по всем записям), кроме записи [exceptId].
-   */
-  async countPhotosByCoachId(coachId: string, exceptId?: string): Promise<number> {
-    const query = this.items
-      .createQueryBuilder('item')
-      .select('COALESCE(SUM(cardinality(item.image_urls)), 0)', 'total')
-      .where('item.coach_id = :coachId', { coachId });
-    if (exceptId) {
-      query.andWhere('item.id <> :exceptId', { exceptId });
-    }
-    const row = await query.getRawOne<{ total: string; }>();
-
-    return Number(row?.total ?? 0);
-  }
-
-  /**
    *
    */
   async deleteById(id: string): Promise<void> {

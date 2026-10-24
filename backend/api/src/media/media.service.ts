@@ -6,7 +6,6 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { TrainerPortfolioRepository } from '../database/repository/trainer-portfolio.repository';
 import { STORAGE, type StoragePort } from '../storage/interface';
 import { sniffImageMime } from '../storage/util/image-type.util';
 import { processImageToWebp } from './helper/image-processor.helper';
@@ -15,7 +14,7 @@ import {
   AVATAR_IMAGE_MAX_SIDE,
   MAX_IMAGE_BYTES,
   MAX_IMAGES_TOTAL_BYTES,
-  MAX_PORTFOLIO_PHOTOS,
+  MAX_PHOTOS_PER_ITEM,
   PORTFOLIO_IMAGE_MAX_SIDE,
 } from './media.constants';
 
@@ -23,11 +22,10 @@ import {
 export class MediaService {
   constructor(
     @Inject(STORAGE) private readonly storage: StoragePort,
-    private readonly portfolio: TrainerPortfolioRepository,
   ) {}
 
   /**
-   * Пакетная загрузка фото портфолио: не больше свободных мест (5 минус уже в портфолио),
+   * Пакетная загрузка фото одной записи портфолио: не больше 5 файлов за раз,
    * каждое до 5 МБ, всего до 25 МБ. Проверки идут до первой записи в хранилище.
    */
   async uploadPortfolioImages(
@@ -37,11 +35,10 @@ export class MediaService {
     if (buffers.length === 0) {
       throw new BadRequestException({ code: 'IMAGE_MISSING', message: 'At least one file is required' });
     }
-    const free = MAX_PORTFOLIO_PHOTOS - await this.portfolio.countPhotosByCoachId(ownerId);
-    if (buffers.length > Math.max(free, 0)) {
+    if (buffers.length > MAX_PHOTOS_PER_ITEM) {
       throw new ConflictException({
-        code: 'PORTFOLIO_LIMIT_REACHED',
-        message: `Portfolio is limited to ${MAX_PORTFOLIO_PHOTOS} photos in total, free slots: ${Math.max(free, 0)}`,
+        code: 'PORTFOLIO_ITEM_PHOTOS_LIMIT_REACHED',
+        message: `At most ${MAX_PHOTOS_PER_ITEM} photos per portfolio item can be uploaded at once`,
       });
     }
     const total = buffers.reduce((sum, buf) => sum + buf.length, 0);

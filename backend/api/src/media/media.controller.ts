@@ -18,7 +18,7 @@ import type { AuthUserPayload } from '../auth/interface/auth-user-payload.interf
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UploadedImagesResponseDto } from './dto/media-batch-response.dto';
 import { UploadedImageResponseDto } from './dto/media-response.dto';
-import { MAX_IMAGE_BYTES, MAX_PORTFOLIO_PHOTOS, MULTER_SLACK_BYTES } from './media.constants';
+import { MAX_IMAGE_BYTES, MAX_PHOTOS_PER_ITEM, MULTER_SLACK_BYTES } from './media.constants';
 import { MediaService } from './media.service';
 
 /**
@@ -59,14 +59,14 @@ export class MediaController {
 
   /**
    * Пакетная загрузка фото портфолио (multipart, поле `files`, до 5 штук, каждое до 5 МБ,
-   * всего до 25 МБ, с учётом свободных мест в портфолио). Возвращает `items` в порядке файлов.
+   * всего до 25 МБ, независимо от других записей). Возвращает `items` в порядке файлов.
    */
   @Post('portfolio-images')
   @HttpCode(201)
   @RequirePermissions(PERMISSIONS.PORTFOLIO_MANAGE_OWN)
   @UseInterceptors(
-    FilesInterceptor('files', MAX_PORTFOLIO_PHOTOS, {
-      limits: { fileSize: MAX_IMAGE_BYTES + MULTER_SLACK_BYTES, files: MAX_PORTFOLIO_PHOTOS },
+    FilesInterceptor('files', MAX_PHOTOS_PER_ITEM, {
+      limits: { fileSize: MAX_IMAGE_BYTES + MULTER_SLACK_BYTES, files: MAX_PHOTOS_PER_ITEM },
     }),
   )
   async uploadPortfolioImages(

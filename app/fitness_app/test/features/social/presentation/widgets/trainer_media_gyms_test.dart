@@ -115,6 +115,51 @@ void main() {
     );
   });
 
+  testWidgets('кнопка «+» портфолио неактивна при 5 работах', (tester) async {
+    when(() => repository.getOwnProfile()).thenAnswer(
+      (_) async => OwnerProfile(
+        userId: 't',
+        displayName: 'Тренер',
+        email: 't@example.com',
+        portfolio: [
+          for (var i = 0; i < 5; i++)
+            PortfolioItem(id: '$i', title: 'Работа $i', sortOrder: i),
+        ],
+      ),
+    );
+    await _pump(tester, repository);
+    await tester.scrollUntilVisible(
+      find.byTooltip('Можно добавить не более 5 работ'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    final button = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.add_circle_outline_rounded),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('кнопка «+» портфолио активна при 4 работах', (tester) async {
+    when(() => repository.getOwnProfile()).thenAnswer(
+      (_) async => OwnerProfile(
+        userId: 't',
+        displayName: 'Тренер',
+        email: 't@example.com',
+        portfolio: [
+          for (var i = 0; i < 4; i++)
+            PortfolioItem(id: '$i', title: 'Работа $i', sortOrder: i),
+        ],
+      ),
+    );
+    await _pump(tester, repository);
+
+    final button = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.add_circle_outline_rounded),
+    );
+    expect(button.onPressed, isNotNull);
+  });
+
   testWidgets('removing a gym calls the backend', (tester) async {
     when(() => repository.detachGym('g1')).thenAnswer((_) async {});
     await _pump(tester, repository);
