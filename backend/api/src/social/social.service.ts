@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { QueryFailedError } from 'typeorm';
+import { MAX_PORTFOLIO_ITEMS } from './social.constants';
 import { CoachStudentLinkRepository } from '../database/repository/coach-student-link.repository';
 import { SessionRepository } from '../database/repository/session.repository';
 import { SessionReviewRepository } from '../database/repository/session-review.repository';
@@ -223,8 +224,11 @@ throw new NotFoundException('User not found');
   ): Promise<PortfolioItemModel> {
     this.requireTrainer(actor);
     const count = await this.portfolio.countByCoachId(actor.id);
-    if (count >= 20) {
-      throw new ConflictException('Portfolio limit reached');
+    if (count >= MAX_PORTFOLIO_ITEMS) {
+      throw new ConflictException({
+        code: 'PORTFOLIO_LIMIT_REACHED',
+        message: `Portfolio is limited to ${MAX_PORTFOLIO_ITEMS} items`,
+      });
     }
     const item = this.portfolio.create({
       coachId: actor.id,
@@ -521,6 +525,9 @@ throw new NotFoundException('User not found');
     };
   }
 
+  /**
+   *
+   */
   private assertSupportedProfileFields(
     actor: SocialActor,
     input: UpdateProfileParams,
@@ -539,6 +546,9 @@ throw new NotFoundException('User not found');
     }
   }
 
+  /**
+   *
+   */
   private applyContacts(
     profile: UserProfileEntity,
     input: UpdateProfileParams,

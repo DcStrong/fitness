@@ -21,6 +21,7 @@ import { RecurringBookingsModule } from './recurring-bookings/recurring-bookings
 import { SessionPackagesModule } from './session-packages/session-packages.module';
 import { WorkoutProgramsModule } from './workout-programs/workout-programs.module';
 import { ChatModule } from './chat/chat.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ChatModule } from './chat/chat.module';
     SessionPackagesModule,
     WorkoutProgramsModule,
     ChatModule,
+    MediaModule,
     HealthModule,
   ],
 })

@@ -144,4 +144,17 @@ describe('Сервис социальных профилей', () => {
       ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('отклоняет шестой элемент портфолио кодом PORTFOLIO_LIMIT_REACHED', async () => {
+    portfolio.countByCoachId.mockResolvedValue(5);
+
+    await expect(
+      service.createPortfolioItem(
+        { id: 'trainer-1', roles: ['trainer'] },
+        { title: 'Фото' },
+      ),
+    ).rejects.toMatchObject({
+      response: { code: 'PORTFOLIO_LIMIT_REACHED' },
+    });
+  });
 });

@@ -9,13 +9,14 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   IsUUID,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
+import { IsMediaUrl } from '../../storage/validator/is-media-url.validator';
+import { MAX_PORTFOLIO_ITEMS } from '../social.constants';
 import type { PreferredContactChannel, TrainingMode } from '../interface';
 
 export class UpdateProfileDto {
@@ -25,7 +26,7 @@ export class UpdateProfileDto {
   displayName!: string;
 
   @IsOptional()
-  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsMediaUrl()
   @MaxLength(2048)
   avatarUrl?: string | null;
 
@@ -125,14 +126,14 @@ export class SavePortfolioItemDto {
   description?: string | null;
 
   @IsOptional()
-  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsMediaUrl()
   @MaxLength(2048)
   imageUrl?: string | null;
 }
 
 export class ReorderPortfolioDto {
   @IsArray()
-  @ArrayMaxSize(20)
+  @ArrayMaxSize(MAX_PORTFOLIO_ITEMS)
   @ArrayUnique()
   @IsUUID('4', { each: true })
   itemIds!: string[];

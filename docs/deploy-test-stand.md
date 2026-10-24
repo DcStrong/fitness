@@ -21,7 +21,7 @@
    `curl -fsSL https://get.docker.com | sh`
    (если 1 ГБ ОЗУ: `fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile`)
 4. Скачайте проект: `git clone https://github.com/DcStrong/fitness.git && cd fitness`
-5. Создайте настройки: `cp deploy/.env.example .env && nano .env`. Впишите адреса из шага 2 и пароли: для `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` и `JWT_REFRESH_SECRET` придумайте разные случайные строки командой `openssl rand -hex 32` (подробнее про базу — раздел «База данных» ниже). У каждой переменной в файле есть комментарий. Заполните `ADMIN_EMAIL` и `ADMIN_PASSWORD`, если нужен админ. Файл `.env` никому не отправляйте.
+5. Создайте настройки: `cp deploy/.env.example .env && nano .env`. Впишите адреса из шага 2 и пароли: для `POSTGRES_PASSWORD`, `S3_SECRET_KEY`, `JWT_ACCESS_SECRET` и `JWT_REFRESH_SECRET` придумайте разные случайные строки командой `openssl rand -hex 32` (подробнее про базу — раздел «База данных» ниже). У каждой переменной в файле есть комментарий. Заполните `ADMIN_EMAIL` и `ADMIN_PASSWORD`, если нужен админ. Файл `.env` никому не отправляйте.
 6. Запустите: `docker compose -f docker-compose.deploy.yml up -d --build` (первая сборка 10–20 минут).
    Миграции и начальные данные (`db:seed`) выполняются автоматически при старте API.
 7. Откройте `https://app.<ваш-адрес>` на телефоне. Войдите или зарегистрируйтесь и раздайте ссылку знакомым.
@@ -42,6 +42,16 @@
 - **Бэкап:** `docker compose -f docker-compose.deploy.yml exec -T postgres pg_dump -U postgres fitness_yoda > backup.sql`
 - **Восстановить из бэкапа** (в запущенный стенд): `docker compose -f docker-compose.deploy.yml exec -T postgres psql -U postgres fitness_yoda < backup.sql` (лучше сначала сбросить базу, как ниже, иначе будут ошибки «уже существует»).
 - **Сбросить базу с нуля:** `docker compose -f docker-compose.deploy.yml down -v && docker compose -f docker-compose.deploy.yml up -d --build`. Миграции и начальные данные применятся заново. Заодно сотрутся и сертификаты Caddy (`caddy_data`), они выдадутся снова.
+
+## Хранилище картинок (MinIO)
+- Аватары и фото портфолио загружаются через `POST /media/images` и лежат в **MinIO** — S3-совместимом хранилище в контейнере `minio` (ставить ничего не нужно). Одноразовый контейнер `minio-init` создаёт бакет `media` и включает анонимное **чтение**; писать может только API по ключу `S3_ACCESS_KEY`/`S3_SECRET_KEY`.
+- **Адреса:** MinIO наружу не открыт. Картинки отдаёт Caddy по `https://<API_HOST>/files/media/images/<id пользователя>/<файл>`; этот адрес API сам подставляет в `avatarUrl`/`imageUrl` (переменная `S3_PUBLIC_URL` задаётся в `docker-compose.deploy.yml`).
+- **Образ MinIO.** С октября 2025 MinIO не публикует образы на Docker Hub. В compose по умолчанию стоит последний community-релиз из `quay.io/minio/minio` (имена образов задаются `MINIO_IMAGE` и `MINIO_MC_IMAGE` в `.env`). Если `up` не может скачать образ — соберите свой из исходников MinIO или возьмите зеркало и впишите его в `.env`. Код API от конкретного хранилища не зависит (порт `StoragePort`, любой S3-совместимый сервер).
+- **`S3_SECRET_KEY`** — придумайте сами (`openssl rand -hex 16`, только буквы и цифры). Как и пароль Postgres, он записывается при первом создании `miniodata`; позже менять нельзя без сброса тома.
+- **Где данные:** Docker-том `miniodata` (`/var/lib/docker/volumes/<папка проекта>_miniodata`). Переживает перезапуск и `down`; удаляется `down -v`.
+- **Бэкап:** `docker run --rm -v <папка проекта>_miniodata:/data -v "$PWD":/backup alpine tar czf /backup/minio-backup.tgz -C /data .` (имя тома смотрите в `docker volume ls`). Восстановление — обратная распаковка в пустой том при остановленном `minio`. Делайте бэкап вместе с `pg_dump`: в базе лежат только ссылки.
+- **Лимиты:** до 5 МБ на файл, только JPEG/PNG/WebP (проверяется по содержимому); при сохранении всё перекодируется в WebP (аватар до 512 px, фото портфолио до 1600 px, метаданные удаляются); до 5 фото в портфолио тренера.
+- **Локальная разработка:** `docker compose up -d` поднимает Postgres и MinIO (консоль http://localhost:9001, `minioadmin`/`minioadmin`). В `backend/api/.env` задайте: `S3_ENDPOINT=http://localhost:9000`, `S3_BUCKET=media`, `S3_ACCESS_KEY=minioadmin`, `S3_SECRET_KEY=minioadmin`, `S3_PUBLIC_URL=http://localhost:9000/media`. Без этих переменных API стартует, а загрузка вернёт 503 `STORAGE_NOT_CONFIGURED`.
 
 ## Производительность Flutter web
 
