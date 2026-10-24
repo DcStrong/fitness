@@ -19,5 +19,5 @@
 
 ## 3. Завершение
 
-- [ ] 3.1 Flutter-интеграция загрузки (поток D)
+- [x] 3.1 Flutter-интеграция загрузки (поток D)
 - [ ] 3.2 `/opsx-sync` и `/opsx-archive`, обновить `.cursor/project/docs/map.md`

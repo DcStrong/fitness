@@ -10,5 +10,5 @@
 
 ## 2. Вне этого change
 
-- [ ] 2.1 Flutter: блок «Залы» в редакторе и фильтры в `trainers_page.dart` (поток D)
+- [x] 2.1 Flutter: блок «Залы» в редакторе и фильтры в `trainers_page.dart` (поток D)
 - [ ] 2.2 `docs/domain` / `map.md`: добавить домен gyms после архивации

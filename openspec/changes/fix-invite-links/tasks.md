@@ -15,4 +15,4 @@
 ## 4. Docs / проверка
 - [x] 4.1 Документация (`docs/deploy-test-stand.md`, `docs/domain/invitations.md`, `docs/mobile/tooling.md`)
 - [x] 4.2 Живая проверка web-цепочки локально
-- [ ] 4.3 Проверка App Links / Universal Links на реальных устройствах и домене стенда
+- [x] 4.3 Проверка App Links / Universal Links на реальных устройствах и домене стенда
