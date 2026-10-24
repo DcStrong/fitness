@@ -106,11 +106,7 @@ class HomeView extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   if (isTrainer)
-                    HomeBentoShortcuts(
-                      canReadFinance: canReadFinance,
-                      sessions: loaded ? state.sessions : const [],
-                      anchor: now,
-                    )
+                    HomeBentoShortcuts(canReadFinance: canReadFinance)
                   else
                     HomeFeatureCardGrid(cards: featureCards),
                 ],
