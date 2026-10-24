@@ -9,6 +9,7 @@ import '../../../../core/widgets/fy_primary_button.dart';
 import '../../../schedule/presentation/schedule_format.dart';
 import '../../data/social_models.dart';
 import '../../data/social_repository.dart';
+import '../widgets/portfolio_photos.dart';
 import '../widgets/safe_network_image.dart';
 import '../widgets/specialty_chips.dart';
 import '../widgets/trainer_gyms_list.dart';
@@ -113,7 +114,7 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
-                        if (trainer.city case final city?)
+                        if (trainer.displayCity case final city?)
                           Text(
                             city,
                             textAlign: TextAlign.center,
@@ -187,15 +188,8 @@ class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (item.imageUrl != null) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SafeNetworkImage(
-                                    url: item.imageUrl,
-                                    height: 180,
-                                    icon: Icons.image_outlined,
-                                  ),
-                                ),
+                              if (item.imageUrls.isNotEmpty) ...[
+                                PortfolioPhotos(urls: item.imageUrls),
                                 const SizedBox(height: 12),
                               ],
                               Text(

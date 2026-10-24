@@ -200,12 +200,20 @@ class UploadedImage extends Equatable {
   List<Object?> get props => [url, size];
 }
 
+/// `imageUrls` с запасом на старый ответ с одиночным `imageUrl`.
+List<String> _portfolioImages(Map<String, dynamic> json) {
+  final urls = _strings(json['imageUrls']);
+  if (urls.isNotEmpty) return urls;
+  final single = json['imageUrl'];
+  return single is String && single.isNotEmpty ? [single] : const [];
+}
+
 class PortfolioItem extends Equatable {
   const PortfolioItem({
     this.id,
     required this.title,
     this.description,
-    this.imageUrl,
+    this.imageUrls = const [],
     required this.sortOrder,
     this.createdAt,
     this.updatedAt,
@@ -215,7 +223,7 @@ class PortfolioItem extends Equatable {
     id: json['id'] as String?,
     title: json['title'] as String? ?? '',
     description: json['description'] as String?,
-    imageUrl: json['imageUrl'] as String?,
+    imageUrls: _portfolioImages(json),
     sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     createdAt: _date(json['createdAt']),
     updatedAt: _date(json['updatedAt']),
@@ -224,13 +232,16 @@ class PortfolioItem extends Equatable {
   final String? id;
   final String title;
   final String? description;
-  final String? imageUrl;
+  final List<String> imageUrls;
   final int sortOrder;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Первое фото — превью работы.
+  String? get imageUrl => imageUrls.firstOrNull;
+
   @override
-  List<Object?> get props => [id, title, description, imageUrl, sortOrder];
+  List<Object?> get props => [id, title, description, imageUrls, sortOrder];
 }
 
 class OwnerProfile extends Equatable {
@@ -300,6 +311,36 @@ class OwnerProfile extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Сколько фото уже в портфолио (сумма по записям).
+  int get portfolioPhotoCount =>
+      portfolio.fold(0, (sum, item) => sum + item.imageUrls.length);
+
+  OwnerProfile copyWith({
+    List<PortfolioItem>? portfolio,
+    List<Gym>? gyms,
+    List<String>? trainingModes,
+    ProfilePrivacy? privacy,
+  }) => OwnerProfile(
+    userId: userId,
+    displayName: displayName,
+    avatarUrl: avatarUrl,
+    bio: bio,
+    city: city,
+    specialties: specialties,
+    trainingModes: trainingModes ?? this.trainingModes,
+    phone: phone,
+    telegramUsername: telegramUsername,
+    preferredContactChannels: preferredContactChannels,
+    email: email,
+    privacy: privacy ?? this.privacy,
+    portfolio: portfolio ?? this.portfolio,
+    gyms: gyms ?? this.gyms,
+    averageRating: averageRating,
+    reviewCount: reviewCount,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
+
   @override
   List<Object?> get props => [
     userId,
@@ -366,6 +407,17 @@ class PublicTrainer extends Equatable {
   final int? reviewCount;
   final List<PortfolioItem> portfolio;
   final bool? isLinked;
+
+  /// Город из профиля, а если он не заполнен — города залов.
+  String? get displayCity {
+    final own = city?.trim();
+    if (own != null && own.isNotEmpty) return own;
+    final cities = <String>{
+      for (final gym in gyms)
+        if (gym.city.isNotEmpty) gym.city,
+    };
+    return cities.isEmpty ? null : cities.join(', ');
+  }
 
   @override
   List<Object?> get props => [

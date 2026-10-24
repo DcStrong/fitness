@@ -11,15 +11,18 @@ import '../cubit/gyms_cubit.dart';
 /// Блок «Залы, где я тренирую». Залы добавляются и удаляются сразу
 /// (отдельно от кнопки «Сохранить профиль»). Требует [GymsCubit] выше по дереву.
 class GymsEditor extends StatefulWidget {
-  const GymsEditor({this.defaultCity, super.key});
+  const GymsEditor({this.defaultCity, this.onInputChanged, super.key});
 
   final String? defaultCity;
 
+  /// Вызывается при вводе в форму нового зала (для отслеживания изменений).
+  final VoidCallback? onInputChanged;
+
   @override
-  State<GymsEditor> createState() => _GymsEditorState();
+  State<GymsEditor> createState() => GymsEditorState();
 }
 
-class _GymsEditorState extends State<GymsEditor> {
+class GymsEditorState extends State<GymsEditor> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _address = TextEditingController();
@@ -30,6 +33,32 @@ class _GymsEditorState extends State<GymsEditor> {
   void initState() {
     super.initState();
     _city = TextEditingController(text: widget.defaultCity ?? '');
+    _initialCity = _city.text;
+    for (final controller in [_name, _address, _district, _city]) {
+      controller.addListener(() => widget.onInputChanged?.call());
+    }
+  }
+
+  late final String _initialCity;
+
+  /// Пользователь начал вводить новый зал, но ещё не добавил его.
+  bool get hasInput =>
+      _name.text.trim().isNotEmpty ||
+      _address.text.trim().isNotEmpty ||
+      _district.text.trim().isNotEmpty ||
+      _city.text.trim() != _initialCity.trim();
+
+  /// Добавляет введённый зал (с валидацией формы); `true`, если добавлен.
+  Future<bool> submit() async {
+    if (!_formKey.currentState!.validate()) return false;
+    final added = await context.read<GymsCubit>().add(
+      name: _name.text,
+      address: _address.text,
+      city: _city.text,
+      district: _district.text,
+    );
+    if (added) _reset();
+    return added;
   }
 
   @override
@@ -41,16 +70,7 @@ class _GymsEditorState extends State<GymsEditor> {
     super.dispose();
   }
 
-  Future<void> _add() async {
-    if (!_formKey.currentState!.validate()) return;
-    final added = await context.read<GymsCubit>().add(
-      name: _name.text,
-      address: _address.text,
-      city: _city.text,
-      district: _district.text,
-    );
-    if (added) _reset();
-  }
+  Future<void> _add() => submit();
 
   Future<void> _useSuggestion(Gym gym) async {
     final added = await context.read<GymsCubit>().addSuggested(gym);
