@@ -37,11 +37,11 @@ export class MediaService {
     if (buffers.length === 0) {
       throw new BadRequestException({ code: 'IMAGE_MISSING', message: 'At least one file is required' });
     }
-    const free = MAX_PORTFOLIO_PHOTOS - await this.portfolio.countByCoachId(ownerId);
+    const free = MAX_PORTFOLIO_PHOTOS - await this.portfolio.countPhotosByCoachId(ownerId);
     if (buffers.length > Math.max(free, 0)) {
       throw new ConflictException({
         code: 'PORTFOLIO_LIMIT_REACHED',
-        message: `Portfolio is limited to ${MAX_PORTFOLIO_PHOTOS} items, free slots: ${Math.max(free, 0)}`,
+        message: `Portfolio is limited to ${MAX_PORTFOLIO_PHOTOS} photos in total, free slots: ${Math.max(free, 0)}`,
       });
     }
     const total = buffers.reduce((sum, buf) => sum + buf.length, 0);

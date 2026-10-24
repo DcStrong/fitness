@@ -15,7 +15,10 @@ export class PortfolioItemResponseDto {
 
   description: string | null;
 
+  /** Первое фото; оставлено для совместимости со старыми клиентами. */
   imageUrl: string | null;
+
+  imageUrls: string[];
 
   sortOrder: number;
 
@@ -27,7 +30,8 @@ export class PortfolioItemResponseDto {
     this.id = item.id;
     this.title = item.title;
     this.description = item.description;
-    this.imageUrl = item.imageUrl;
+    this.imageUrl = item.imageUrls[0] ?? null;
+    this.imageUrls = item.imageUrls;
     this.sortOrder = item.sortOrder;
     this.createdAt = item.createdAt;
     this.updatedAt = item.updatedAt;
@@ -39,14 +43,18 @@ export class PublicPortfolioItemResponseDto {
 
   description: string | null;
 
+  /** Первое фото; оставлено для совместимости со старыми клиентами. */
   imageUrl: string | null;
+
+  imageUrls: string[];
 
   sortOrder: number;
 
   constructor(item: PortfolioItemModel) {
     this.title = item.title;
     this.description = item.description;
-    this.imageUrl = item.imageUrl;
+    this.imageUrl = item.imageUrls[0] ?? null;
+    this.imageUrls = item.imageUrls;
     this.sortOrder = item.sortOrder;
   }
 }

@@ -90,7 +90,7 @@ export class UserProfileRepository {
 
     if (params.query) {
       base.andWhere(
-        '(profile.display_name ILIKE :query OR profile.city ILIKE :query)',
+        '(profile.display_name ILIKE :query OR profile.city ILIKE :query OR EXISTS (SELECT 1 FROM trainer_gyms tgq INNER JOIN gyms gq ON gq.id = tgq.gym_id WHERE tgq.coach_id = profile.user_id AND gq.city ILIKE :query))',
         { query: `%${params.query}%` },
       );
     }

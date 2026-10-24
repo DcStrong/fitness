@@ -25,6 +25,10 @@ describe('Сервис социальных профилей', () => {
   const portfolio = {
     findByCoachId: jest.fn(),
     countByCoachId: jest.fn(),
+    countPhotosByCoachId: jest.fn(),
+    create: jest.fn((data: object) => data),
+    save: jest.fn((data: object) => Promise.resolve({ id: 'item-1', createdAt: new Date(), updatedAt: new Date(), ...data })),
+    findById: jest.fn(),
   };
   const reviews = {
     ratingForCoach: jest.fn(),
@@ -162,6 +166,49 @@ describe('Сервис социальных профилей', () => {
       ),
     ).rejects.toMatchObject({
       response: { code: 'PORTFOLIO_LIMIT_REACHED' },
+    });
+  });
+
+  describe('фото в записи портфолио', () => {
+    const trainer = { id: 'trainer-1', roles: ['trainer'] };
+    const urls = (n: number): string[] => Array.from({ length: n }, (_, i) => `https://example.com/${i}.jpg`);
+
+    beforeEach(() => {
+      portfolio.countByCoachId.mockResolvedValue(1);
+    });
+
+    it('сохраняет несколько фото в одной записи', async () => {
+      portfolio.countPhotosByCoachId.mockResolvedValue(2);
+
+      const item = await service.createPortfolioItem(trainer, { title: 'Работы', imageUrls: urls(3) });
+
+      expect(item.imageUrls).toEqual(urls(3));
+    });
+
+    it('отклоняет запись, если сумма фото по портфолио больше 5', async () => {
+      portfolio.countPhotosByCoachId.mockResolvedValue(3);
+
+      await expect(
+        service.createPortfolioItem(trainer, { title: 'Работы', imageUrls: urls(3) }),
+      ).rejects.toMatchObject({ response: { code: 'PORTFOLIO_LIMIT_REACHED' } });
+    });
+
+    it('при обновлении не считает фото самой записи', async () => {
+      portfolio.findById.mockResolvedValue({ id: 'item-1', coachId: 'trainer-1', title: 'a', description: null, imageUrls: urls(4), sortOrder: 0 });
+      portfolio.countPhotosByCoachId.mockResolvedValue(1);
+
+      const item = await service.updatePortfolioItem(trainer, 'item-1', { title: 'a', imageUrls: urls(4) });
+
+      expect(portfolio.countPhotosByCoachId).toHaveBeenCalledWith('trainer-1', 'item-1');
+      expect(item.imageUrls).toHaveLength(4);
+    });
+
+    it('принимает устаревший imageUrl как одно фото', async () => {
+      portfolio.countPhotosByCoachId.mockResolvedValue(0);
+
+      const item = await service.createPortfolioItem(trainer, { title: 'a', imageUrl: 'https://example.com/x.jpg' });
+
+      expect(item.imageUrls).toEqual(['https://example.com/x.jpg']);
     });
   });
 

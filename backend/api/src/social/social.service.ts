@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { QueryFailedError } from 'typeorm';
+import { MAX_PORTFOLIO_PHOTOS } from '../media/media.constants';
 import { MAX_PORTFOLIO_ITEMS } from './social.constants';
 import { CoachStudentLinkRepository } from '../database/repository/coach-student-link.repository';
 import { SessionRepository } from '../database/repository/session.repository';
@@ -253,7 +254,7 @@ throw new NotFoundException('User not found');
       coachId: actor.id,
       title: this.requiredText(input.title, 'title'),
       description: this.optionalText(input.description, 'description'),
-      imageUrl: input.imageUrl ?? null,
+      imageUrls: await this.resolveImageUrls(actor.id, input),
       sortOrder: count,
     });
 
@@ -272,7 +273,7 @@ throw new NotFoundException('User not found');
     const item = await this.ownedPortfolioItem(actor.id, itemId);
     item.title = this.requiredText(input.title, 'title');
     item.description = this.optionalText(input.description, 'description');
-    item.imageUrl = input.imageUrl ?? null;
+    item.imageUrls = await this.resolveImageUrls(actor.id, input, item.id);
 
     return this.toPortfolio(await this.portfolio.save(item));
   }
@@ -635,6 +636,27 @@ return null;
   }
 
   /**
+   * Фото записи: `imageUrls` (или устаревший `imageUrl`); всего в портфолио не больше
+   * MAX_PORTFOLIO_PHOTOS фото, считая остальные записи.
+   */
+  private async resolveImageUrls(
+    coachId: string,
+    input: { imageUrls?: string[]; imageUrl?: string | null; },
+    exceptItemId?: string,
+  ): Promise<string[]> {
+    const urls = input.imageUrls ?? (input.imageUrl ? [input.imageUrl] : []);
+    const others = await this.portfolio.countPhotosByCoachId(coachId, exceptItemId);
+    if (others + urls.length > MAX_PORTFOLIO_PHOTOS) {
+      throw new ConflictException({
+        code: 'PORTFOLIO_LIMIT_REACHED',
+        message: `Portfolio is limited to ${MAX_PORTFOLIO_PHOTOS} photos in total`,
+      });
+    }
+
+    return urls;
+  }
+
+  /**
    *
    */
   private toPortfolio(item: TrainerPortfolioItemEntity): PortfolioItemModel {
@@ -642,7 +664,7 @@ return null;
       id: item.id,
       title: item.title,
       description: item.description,
-      imageUrl: item.imageUrl,
+      imageUrls: item.imageUrls ?? [],
       sortOrder: item.sortOrder,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
